@@ -1,0 +1,70 @@
+SALTO Electronic Lock - Lock Showing Offline Troubleshooting
+=============================================================
+
+When a lock shows as "offline" in ProAccess SPACE, the system cannot
+communicate with it wirelessly. The lock still works with keycards, but
+it will not receive real-time updates such as cancellations or new
+access permissions until the connection is restored.
+
+STEP-BY-STEP TROUBLESHOOTING
+
+Check the Lock Battery
+1. Low batteries are the most common cause of a lock going offline. A
+   lock with weak batteries may not have enough power to maintain its
+   wireless connection.
+
+2. Replace the batteries with 4 fresh AA alkaline batteries (see the
+   Battery Replacement guide).
+
+3. Wait 2-3 minutes after replacing batteries for the lock to reconnect.
+
+Check the Wireless Connection
+4. In ProAccess SPACE, go to the door's properties and check the
+   connection status. Look for signal strength or last communication
+   timestamp.
+
+5. If the lock was recently installed or moved, it may be out of range
+   of the nearest wireless gateway or repeater.
+
+6. Confirm that the wireless gateway nearest to the lock is powered on
+   and has its status lights showing normal operation (usually solid
+   green).
+
+Update the Lock with a PPD (Portable Programming Device)
+7. If the lock cannot connect wirelessly, you can update it manually
+   using the PPD.
+
+8. Connect the PPD to ProAccess SPACE via USB and download the latest
+   door configuration.
+
+9. Take the PPD to the lock and hold it against the lock's reader.
+
+10. Wait for the PPD to transfer the update. The lock will flash to
+    confirm it received the data.
+
+Check the Network
+11. Verify that the SALTO server is running and accessible on your
+    property's network.
+
+12. Check that the network switch or router that connects the SALTO
+    gateways is powered on and functioning.
+
+13. If other locks are also offline, the issue is likely the network or
+    server rather than individual locks.
+
+Restart the SALTO Server
+14. If many locks are offline or the server appears unresponsive, try
+    restarting the SALTO ProAccess SPACE server service.
+
+15. On the server computer, restart the SALTO service from Windows
+    Services or restart the computer entirely.
+
+16. Wait 5-10 minutes for all locks to reconnect after a server restart.
+
+WHEN TO ESCALATE
+- A single lock stays offline after fresh batteries and PPD update.
+- Multiple locks are offline and a server restart did not help.
+- The wireless gateway hardware appears damaged or has no power.
+
+Escalate to Tier 2 support with the affected door names and what steps
+you have already completed.

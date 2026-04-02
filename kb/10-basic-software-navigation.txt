@@ -1,0 +1,89 @@
+SALTO ProAccess SPACE - Basic Software Navigation Guide
+========================================================
+
+ProAccess SPACE is the web-based software used to manage SALTO locks,
+keycards, and access permissions. This guide covers the basics of
+finding your way around the system.
+
+LOGGING IN
+
+1. Open a web browser (Chrome or Firefox recommended).
+
+2. Go to your property's ProAccess SPACE address. This is typically a
+   URL like https://your-hotel.salto.ws or a local network address
+   provided by your IT team.
+
+3. Enter your username (usually your email address) and password.
+
+4. Click "Login." If you have forgotten your password, see the Password
+   Reset guide.
+
+THE DASHBOARD
+
+5. After logging in, you will see the main dashboard. This shows an
+   overview of your system, including lock status, recent alerts, and
+   quick links.
+
+6. The left-hand menu is your main navigation. The key sections are:
+   - Doors (or Access Points)
+   - Cardholders (or Users)
+   - Monitoring
+   - Reports
+   - Settings
+
+FINDING DOORS AND ZONES
+
+7. Click "Doors" or "Access Points" in the left menu to see a list of
+   all locks in your property.
+
+8. Use the search bar at the top to find a specific room number or
+   door name.
+
+9. Click on a door to see its details: status (online/offline), battery
+   level, firmware version, and assigned access zones.
+
+10. Zones are groups of doors (for example, "Guest Rooms Floor 3" or
+    "Pool Area"). You can find zone settings under "Zones" or within
+    the Doors section.
+
+FINDING GUESTS AND STAFF
+
+11. Click "Cardholders" or "Users" in the left menu to see everyone
+    with a keycard in the system.
+
+12. Use the search bar to find a person by name or card number.
+
+13. Click on a cardholder to see their details: assigned rooms, valid
+    dates, card status, and access history.
+
+REPORTS
+
+14. Click "Reports" in the left menu to access system reports.
+
+15. Common reports include:
+    - Door event reports (who accessed which doors).
+    - Battery status reports (which locks need new batteries).
+    - Card usage reports (active, expired, or cancelled cards).
+
+16. Select the report type, set your date range, and click "Generate."
+    Most reports can be exported as CSV or PDF.
+
+SETTINGS
+
+17. Click "Settings" in the left menu for system configuration.
+
+18. As front desk staff, you typically will not need to change settings.
+    This area is mainly used by managers and system administrators for
+    tasks like adding new locks, creating access zones, or managing
+    user accounts.
+
+19. If you need a setting changed, contact your manager or system
+    administrator.
+
+TIPS FOR DAILY USE
+- Bookmark the ProAccess SPACE login page for quick access.
+- Keep the dashboard open during your shift to monitor alerts.
+- If the software feels slow or unresponsive, try refreshing the
+  browser page. If the problem continues, restart the browser.
+- Always log out when you leave the workstation by clicking your name
+  or profile icon and selecting "Logout."

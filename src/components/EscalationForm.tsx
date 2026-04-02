@@ -59,14 +59,49 @@ export default function EscalationForm({
     }
   };
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '8px 12px',
+    fontSize: 13,
+    border: '1px solid #e2e8f0',
+    borderRadius: 10,
+    outline: 'none',
+    color: '#0f172a',
+    background: '#ffffff',
+  };
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    fontSize: 12,
+    fontWeight: 500,
+    color: '#0f172a',
+    marginBottom: 4,
+  };
+
   if (submitted) {
     return (
-      <div className="mx-4 mb-4 rounded-xl border border-green-200 bg-green-50 p-5">
-        <div className="flex items-center gap-2 mb-2">
+      <div
+        style={{
+          margin: '0 14px 14px 14px',
+          borderRadius: 12,
+          border: '1px solid #bbf7d0',
+          background: '#f0fdf4',
+          padding: 16,
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            marginBottom: 6,
+          }}
+        >
           <svg
-            className="w-5 h-5 text-green-600"
+            width="18"
+            height="18"
             fill="none"
-            stroke="currentColor"
+            stroke="#16a34a"
             viewBox="0 0 24 24"
           >
             <path
@@ -76,101 +111,138 @@ export default function EscalationForm({
               d="M5 13l4 4L19 7"
             />
           </svg>
-          <h3 className="font-semibold text-green-800">
+          <span style={{ fontWeight: 600, fontSize: 14, color: '#166534' }}>
             Escalation Submitted
-          </h3>
+          </span>
         </div>
-        <p className="text-sm text-green-700">
-          Our support team will contact you shortly. Thank you for your
-          patience.
+        <p style={{ fontSize: 13, color: '#15803d', margin: 0 }}>
+          Our support team will contact you shortly. Thank you for your patience.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="mx-4 mb-4 rounded-xl border border-amber-200 bg-amber-50 p-5">
-      <h3 className="font-semibold text-amber-900 mb-1">
+    <div
+      style={{
+        margin: '0 14px 14px 14px',
+        borderRadius: 12,
+        border: '1px solid #fecaca',
+        background: '#fee2e2',
+        padding: 16,
+      }}
+    >
+      <h3
+        style={{
+          margin: '0 0 4px 0',
+          fontWeight: 600,
+          fontSize: 14,
+          color: '#991b1b',
+        }}
+      >
         Connect with Our Support Team
       </h3>
-      <p className="text-sm text-amber-700 mb-4">
+      <p
+        style={{
+          margin: '0 0 14px 0',
+          fontSize: 13,
+          color: '#64748b',
+        }}
+      >
         Please provide your contact details so our team can follow up.
       </p>
 
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">
-            Name <span className="text-red-500">*</span>
+      <form onSubmit={handleSubmit}>
+        <div style={{ marginBottom: 10 }}>
+          <label style={labelStyle}>
+            Name <span style={{ color: '#ef4444' }}>*</span>
           </label>
           <input
             type="text"
             value={contactName}
             onChange={(e) => setContactName(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+            style={inputStyle}
             placeholder="Your full name"
             required
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: 10,
+            marginBottom: 10,
+          }}
+        >
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              Email
-            </label>
+            <label style={labelStyle}>Email</label>
             <input
               type="email"
               value={contactEmail}
               onChange={(e) => setContactEmail(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              style={inputStyle}
               placeholder="you@example.com"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              Phone
-            </label>
+            <label style={labelStyle}>Phone</label>
             <input
               type="tel"
               value={contactPhone}
               onChange={(e) => setContactPhone(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              style={inputStyle}
               placeholder="+1 (555) 000-0000"
             />
           </div>
         </div>
 
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">
-            Property / Building Name
-          </label>
+        <div style={{ marginBottom: 10 }}>
+          <label style={labelStyle}>Property / Building Name</label>
           <input
             type="text"
             value={propertyName}
             onChange={(e) => setPropertyName(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+            style={inputStyle}
             placeholder="e.g. Main Office Building"
           />
         </div>
 
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">
-            Issue Summary
-          </label>
+        <div style={{ marginBottom: 10 }}>
+          <label style={labelStyle}>Issue Summary</label>
           <textarea
             value={summary}
             onChange={(e) => setSummary(e.target.value)}
             rows={2}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-white"
+            style={{
+              ...inputStyle,
+              resize: 'none' as const,
+            }}
             placeholder="Brief description of the issue"
           />
         </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && (
+          <p style={{ fontSize: 13, color: '#ef4444', margin: '0 0 8px 0' }}>
+            {error}
+          </p>
+        )}
 
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          style={{
+            width: '100%',
+            padding: '10px 16px',
+            fontSize: 13,
+            fontWeight: 600,
+            color: '#ffffff',
+            background: '#991b1b',
+            border: 'none',
+            borderRadius: 10,
+            cursor: submitting ? 'not-allowed' : 'pointer',
+            opacity: submitting ? 0.6 : 1,
+          }}
         >
           {submitting ? 'Submitting...' : 'Submit Escalation'}
         </button>

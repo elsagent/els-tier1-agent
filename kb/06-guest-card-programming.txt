@@ -1,0 +1,69 @@
+SALTO ProAccess SPACE - Guest Card Programming Guide
+=====================================================
+
+This guide walks you through creating a guest keycard in ProAccess SPACE.
+You will need a blank SALTO-compatible RFID card and an encoder connected
+to your computer.
+
+STEP-BY-STEP CARD PROGRAMMING
+
+Open ProAccess SPACE
+1. Open ProAccess SPACE in your web browser and log in with your
+   username and password.
+
+2. From the main dashboard, click on "Cardholders" or "Users" in the
+   left-hand menu (the label depends on your software version).
+
+Create a Guest Cardholder
+3. Click the "New" or "Add Cardholder" button.
+
+4. Enter the guest's name in the First Name and Last Name fields.
+   Tip: Use the name from the reservation for consistency.
+
+5. Set the cardholder type to "Guest" (if your system uses cardholder
+   types).
+
+Assign the Room
+6. In the cardholder's access section, click "Add Access" or "Assign
+   Access Point."
+
+7. Search for the room number or door name and select it from the list.
+
+8. If the guest also needs access to common areas (pool, gym, parking),
+   add those zones as well.
+
+Set Valid Dates and Times
+9. Set the "Valid From" date and time to the guest's check-in date and
+   your property's standard check-in time (for example, 3:00 PM).
+
+10. Set the "Valid Until" date and time to the guest's check-out date
+    and your standard check-out time (for example, 11:00 AM).
+
+11. Double-check these dates. Incorrect dates are the most common cause
+    of guest card problems.
+
+Encode the Card
+12. Place a blank RFID card on the encoder connected to your computer.
+
+13. Click the "Encode" or "Write Card" button in ProAccess SPACE.
+
+14. Wait for the encoding to complete. You will see a confirmation
+    message on screen. The encoder may beep or flash a green light.
+
+15. Remove the card from the encoder.
+
+Test the Card
+16. If possible, go to the assigned room and test the card on the lock.
+    The lock should flash green and unlock.
+
+17. If you cannot test at the door, at minimum confirm in ProAccess
+    SPACE that the card shows as "Active" with the correct room and
+    dates.
+
+COMMON ISSUES
+- If encoding fails, make sure the encoder is plugged in and recognized
+  by the system. Try a different card.
+- If the card does not work at the door, verify the dates, room
+  assignment, and that the door is online.
+- To make a duplicate card for a second guest in the same room, repeat
+  the process and assign the same room and dates.

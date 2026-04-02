@@ -36,18 +36,64 @@ export default function SignupPage() {
   if (success) {
     return (
       <>
-        <h1 className="mb-4 text-center text-2xl font-bold text-gray-900">
+        {/* ELS Logo */}
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 12,
+              background: "#991b1b",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#ffffff",
+              fontWeight: 900,
+              fontSize: 14,
+              letterSpacing: 0.5,
+            }}
+          >
+            ELS
+          </div>
+        </div>
+        <h1
+          style={{
+            margin: "0 0 8px 0",
+            textAlign: "center",
+            fontSize: 20,
+            fontWeight: 700,
+            color: "#0f172a",
+          }}
+        >
           Check your email
         </h1>
-        <p className="text-center text-sm text-gray-600">
+        <p
+          style={{
+            margin: "0 0 0 0",
+            textAlign: "center",
+            fontSize: 13,
+            color: "#64748b",
+          }}
+        >
           We sent a confirmation link to{" "}
-          <span className="font-medium text-gray-900">{email}</span>. Click the
-          link to activate your account.
+          <span style={{ fontWeight: 600, color: "#0f172a" }}>{email}</span>.
+          Click the link to activate your account.
         </p>
-        <p className="mt-6 text-center text-sm text-gray-500">
+        <p
+          style={{
+            marginTop: 20,
+            textAlign: "center",
+            fontSize: 13,
+            color: "#64748b",
+          }}
+        >
           <Link
             href="/login"
-            className="font-semibold text-indigo-600 hover:text-indigo-500"
+            style={{
+              fontWeight: 600,
+              color: "#991b1b",
+              textDecoration: "none",
+            }}
           >
             Back to sign in
           </Link>
@@ -58,15 +104,60 @@ export default function SignupPage() {
 
   return (
     <>
-      <h1 className="mb-6 text-center text-2xl font-bold text-gray-900">
-        Create your account
-      </h1>
+      {/* ELS Logo */}
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+        <div
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 12,
+            background: "#991b1b",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#ffffff",
+            fontWeight: 900,
+            fontSize: 14,
+            letterSpacing: 0.5,
+          }}
+        >
+          ELS
+        </div>
+      </div>
 
-      <form onSubmit={handleSignup} className="space-y-5">
-        <div>
+      <h1
+        style={{
+          margin: "0 0 4px 0",
+          textAlign: "center",
+          fontSize: 20,
+          fontWeight: 700,
+          color: "#0f172a",
+        }}
+      >
+        Electronic Locksmith
+      </h1>
+      <p
+        style={{
+          margin: "0 0 24px 0",
+          textAlign: "center",
+          fontSize: 13,
+          color: "#64748b",
+        }}
+      >
+        Create your account
+      </p>
+
+      <form onSubmit={handleSignup}>
+        <div style={{ marginBottom: 16 }}>
           <label
             htmlFor="email"
-            className="block text-sm font-medium text-gray-700"
+            style={{
+              display: "block",
+              fontSize: 13,
+              fontWeight: 500,
+              color: "#0f172a",
+              marginBottom: 4,
+            }}
           >
             Email address
           </label>
@@ -76,15 +167,30 @@ export default function SignupPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm"
             placeholder="you@example.com"
+            style={{
+              width: "100%",
+              padding: "8px 12px",
+              fontSize: 13,
+              border: "1px solid #e2e8f0",
+              borderRadius: 10,
+              outline: "none",
+              color: "#0f172a",
+              background: "#ffffff",
+            }}
           />
         </div>
 
-        <div>
+        <div style={{ marginBottom: 16 }}>
           <label
             htmlFor="password"
-            className="block text-sm font-medium text-gray-700"
+            style={{
+              display: "block",
+              fontSize: 13,
+              fontWeight: 500,
+              color: "#0f172a",
+              marginBottom: 4,
+            }}
           >
             Password
           </label>
@@ -95,29 +201,62 @@ export default function SignupPage() {
             minLength={6}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm"
             placeholder="At least 6 characters"
+            style={{
+              width: "100%",
+              padding: "8px 12px",
+              fontSize: 13,
+              border: "1px solid #e2e8f0",
+              borderRadius: 10,
+              outline: "none",
+              color: "#0f172a",
+              background: "#ffffff",
+            }}
           />
         </div>
 
         {error && (
-          <p className="text-sm text-red-600">{error}</p>
+          <p style={{ fontSize: 13, color: "#ef4444", margin: "0 0 12px 0" }}>
+            {error}
+          </p>
         )}
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
+          style={{
+            width: "100%",
+            padding: "10px 16px",
+            fontSize: 13,
+            fontWeight: 600,
+            color: "#ffffff",
+            background: "#991b1b",
+            border: "none",
+            borderRadius: 10,
+            cursor: loading ? "not-allowed" : "pointer",
+            opacity: loading ? 0.6 : 1,
+          }}
         >
           {loading ? "Creating account..." : "Sign up"}
         </button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-gray-500">
+      <p
+        style={{
+          marginTop: 20,
+          textAlign: "center",
+          fontSize: 13,
+          color: "#64748b",
+        }}
+      >
         Already have an account?{" "}
         <Link
           href="/login"
-          className="font-semibold text-indigo-600 hover:text-indigo-500"
+          style={{
+            fontWeight: 600,
+            color: "#991b1b",
+            textDecoration: "none",
+          }}
         >
           Sign in
         </Link>

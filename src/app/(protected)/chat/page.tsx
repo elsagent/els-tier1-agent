@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import ChatWindow from '@/components/ChatWindow';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 import EscalationForm from '@/components/EscalationForm';
 
+/* ─── types ─── */
 interface Message {
   role: 'user' | 'assistant';
   content: string;
@@ -19,7 +21,277 @@ interface Conversation {
   updated_at: string;
 }
 
+/* ─── LeftSidebar ─── */
+function LeftSidebar({
+  conversations,
+  conversationId,
+  onNewChat,
+  onSelectConversation,
+  onLogout,
+}: {
+  conversations: Conversation[];
+  conversationId: string | null;
+  onNewChat: () => void;
+  onSelectConversation: (c: Conversation) => void;
+  onLogout: () => void;
+}) {
+  return (
+    <div
+      style={{
+        width: 320,
+        minWidth: 320,
+        background: '#ffffff',
+        borderRight: '1px solid #e2e8f0',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 14,
+        padding: 16,
+        height: '100vh',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Brand header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 12,
+            background: '#991b1b',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#ffffff',
+            fontWeight: 900,
+            fontSize: 14,
+            letterSpacing: 0.5,
+            flexShrink: 0,
+          }}
+        >
+          ELS
+        </div>
+        <div>
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 700,
+              color: '#0f172a',
+              lineHeight: 1.2,
+            }}
+          >
+            Electronic Locksmith
+          </div>
+          <div style={{ fontSize: 11, color: '#64748b' }}>
+            Customer Support
+          </div>
+        </div>
+      </div>
+
+      {/* Customer badge */}
+      <div
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          background: '#ecfdf5',
+          border: '1px solid #a7f3d0',
+          borderRadius: 8,
+          padding: '4px 10px',
+          alignSelf: 'flex-start',
+        }}
+      >
+        <span
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: '50%',
+            background: '#16a34a',
+          }}
+        />
+        <span style={{ fontSize: 11, fontWeight: 600, color: '#065f46' }}>
+          Customer
+        </span>
+      </div>
+
+      {/* New chat button */}
+      <button
+        onClick={onNewChat}
+        style={{
+          width: '100%',
+          padding: '8px 0',
+          fontSize: 13,
+          fontWeight: 600,
+          color: '#ffffff',
+          background: '#991b1b',
+          border: 'none',
+          borderRadius: 10,
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 6,
+        }}
+      >
+        <svg
+          width="14"
+          height="14"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 4v16m8-8H4"
+          />
+        </svg>
+        New Chat
+      </button>
+
+      {/* Conversations list */}
+      <div
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2,
+        }}
+      >
+        {conversations.map((conv) => (
+          <button
+            key={conv.id}
+            onClick={() => onSelectConversation(conv)}
+            style={{
+              width: '100%',
+              textAlign: 'left',
+              padding: '10px 10px',
+              border: 'none',
+              borderRadius: 8,
+              cursor: 'pointer',
+              background:
+                conversationId === conv.id ? '#fee2e2' : 'transparent',
+              transition: 'background 0.15s',
+            }}
+          >
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 500,
+                color: '#0f172a',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {conv.title || 'Untitled'}
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                marginTop: 3,
+              }}
+            >
+              <span
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: '50%',
+                  background:
+                    conv.status === 'escalated'
+                      ? '#f59e0b'
+                      : conv.status === 'resolved'
+                      ? '#16a34a'
+                      : '#3b82f6',
+                  flexShrink: 0,
+                }}
+              />
+              <span style={{ fontSize: 11, color: '#64748b' }}>
+                {conv.status === 'escalated'
+                  ? 'Escalated'
+                  : conv.status === 'resolved'
+                  ? 'Resolved'
+                  : 'In Progress'}
+              </span>
+            </div>
+          </button>
+        ))}
+
+        {conversations.length === 0 && (
+          <p
+            style={{
+              textAlign: 'center',
+              fontSize: 12,
+              color: '#94a3b8',
+              padding: '32px 0',
+            }}
+          >
+            No conversations yet
+          </p>
+        )}
+      </div>
+
+      {/* Usage guidelines */}
+      <div
+        style={{
+          background: '#f8fafc',
+          borderRadius: 10,
+          padding: 12,
+          border: '1px solid #e2e8f0',
+        }}
+      >
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 600,
+            color: '#0f172a',
+            marginBottom: 6,
+          }}
+        >
+          Support Guidelines
+        </div>
+        <ul
+          style={{
+            margin: 0,
+            paddingLeft: 14,
+            fontSize: 11,
+            color: '#64748b',
+            lineHeight: 1.5,
+          }}
+        >
+          <li>Describe your lock issue clearly</li>
+          <li>Include model/serial numbers if known</li>
+          <li>Note any error codes or lights</li>
+        </ul>
+      </div>
+
+      {/* Logout */}
+      <button
+        onClick={onLogout}
+        style={{
+          width: '100%',
+          padding: '8px 0',
+          fontSize: 12,
+          fontWeight: 500,
+          color: '#64748b',
+          background: 'transparent',
+          border: '1px solid #e2e8f0',
+          borderRadius: 8,
+          cursor: 'pointer',
+        }}
+      >
+        Sign out
+      </button>
+    </div>
+  );
+}
+
+/* ─── ChatPage (main) ─── */
 export default function ChatPage() {
+  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -28,10 +300,18 @@ export default function ChatPage() {
   const [showEscalationForm, setShowEscalationForm] = useState(false);
   const [escalationSummary, setEscalationSummary] = useState('');
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Fetch conversation list
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isLoading]);
+
+  /* fetch conversations */
   const fetchConversations = useCallback(async () => {
     try {
       const res = await fetch('/api/session');
@@ -40,7 +320,7 @@ export default function ChatPage() {
         setConversations(data.conversations || []);
       }
     } catch {
-      // Silently fail
+      // silent
     }
   }, []);
 
@@ -48,23 +328,18 @@ export default function ChatPage() {
     fetchConversations();
   }, [fetchConversations]);
 
-  // Load a previous conversation's messages
-  const loadConversation = async (conv: Conversation) => {
+  /* load a conversation */
+  const loadConversation = (conv: Conversation) => {
     setConversationId(conv.id);
     setIsEscalated(conv.status === 'escalated');
     setShowEscalationForm(false);
-    setMessages([]);
-    setInput('');
-
-    // We don't have a messages endpoint yet, so just set the conversation
-    // In production, you'd fetch messages from /api/messages?conversationId=...
-    // For now, show a placeholder
     setMessages([
       {
         role: 'assistant',
         content: `Continuing conversation: "${conv.title}"\n\nPlease send a message to continue.`,
       },
     ]);
+    setInput('');
   };
 
   const startNewChat = () => {
@@ -77,12 +352,19 @@ export default function ChatPage() {
     inputRef.current?.focus();
   };
 
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/login');
+    router.refresh();
+  };
+
+  /* send message via SSE */
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     const trimmed = input.trim();
     if (!trimmed || isLoading || isEscalated) return;
 
-    // Add user message
     const userMsg: Message = { role: 'user', content: trimmed };
     setMessages((prev) => [...prev, userMsg]);
     setInput('');
@@ -98,9 +380,7 @@ export default function ChatPage() {
         }),
       });
 
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
-      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       const reader = res.body?.getReader();
       if (!reader) throw new Error('No response body');
@@ -115,7 +395,6 @@ export default function ChatPage() {
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
-        // Keep the last incomplete line in the buffer
         buffer = lines.pop() || '';
 
         for (const line of lines) {
@@ -177,12 +456,11 @@ export default function ChatPage() {
                 break;
 
               case 'done':
-                // Refresh conversation list
                 fetchConversations();
                 break;
             }
           } catch {
-            // Skip malformed JSON
+            // skip malformed JSON
           }
         }
       }
@@ -192,8 +470,7 @@ export default function ChatPage() {
         ...prev,
         {
           role: 'assistant',
-          content:
-            'Sorry, something went wrong. Please try again.',
+          content: 'Sorry, something went wrong. Please try again.',
         },
       ]);
     } finally {
@@ -208,180 +485,311 @@ export default function ChatPage() {
     }
   };
 
+  /* ─── render ─── */
   return (
-    <div className="flex h-screen bg-white">
-      {/* Sidebar */}
-      <div
-        className={`${
-          sidebarOpen ? 'w-72' : 'w-0'
-        } transition-all duration-200 border-r border-gray-200 bg-gray-50 flex flex-col overflow-hidden`}
-      >
-        <div className="p-3 border-b border-gray-200">
-          <button
-            onClick={startNewChat}
-            className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            New Chat
-          </button>
-        </div>
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '320px 1fr',
+        height: '100vh',
+        background: '#f8fafc',
+      }}
+    >
+      {/* Left sidebar */}
+      <LeftSidebar
+        conversations={conversations}
+        conversationId={conversationId}
+        onNewChat={startNewChat}
+        onSelectConversation={loadConversation}
+        onLogout={handleLogout}
+      />
 
-        <div className="flex-1 overflow-y-auto">
-          {conversations.map((conv) => (
-            <button
-              key={conv.id}
-              onClick={() => loadConversation(conv)}
-              className={`w-full text-left px-4 py-3 border-b border-gray-100 hover:bg-gray-100 transition-colors ${
-                conversationId === conv.id ? 'bg-blue-50' : ''
-              }`}
-            >
-              <p className="text-sm font-medium text-gray-900 truncate">
-                {conv.title || 'Untitled'}
-              </p>
-              <div className="flex items-center gap-2 mt-1">
-                <span
-                  className={`inline-block w-2 h-2 rounded-full ${
-                    conv.status === 'escalated'
-                      ? 'bg-amber-500'
-                      : conv.status === 'resolved'
-                      ? 'bg-green-500'
-                      : 'bg-blue-500'
-                  }`}
-                />
-                <span className="text-xs text-gray-500">
-                  {conv.status === 'escalated'
-                    ? 'Escalated'
-                    : conv.status === 'resolved'
-                    ? 'Resolved'
-                    : conv.tier === 'tier1'
-                    ? 'In Progress'
-                    : 'Triaging'}
-                </span>
-              </div>
-            </button>
-          ))}
-
-          {conversations.length === 0 && (
-            <p className="px-4 py-8 text-sm text-gray-400 text-center">
-              No conversations yet
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
-        <header className="bg-gray-900 text-white px-4 py-3 flex items-center gap-3 shrink-0">
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-1.5 rounded-md hover:bg-gray-700 transition-colors"
-            aria-label="Toggle sidebar"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 6h16M4 12h16M4 18h16"
-              />
-            </svg>
-          </button>
-
-          <div className="flex items-center gap-2">
-            <svg
-              className="w-6 h-6 text-blue-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-              />
-            </svg>
-            <h1 className="text-lg font-semibold tracking-wide">
-              SALTO Support
-            </h1>
-          </div>
-
-          {isEscalated && (
-            <span className="ml-auto text-xs bg-amber-500 text-white px-2.5 py-1 rounded-full font-medium">
-              Escalated
-            </span>
-          )}
-        </header>
-
-        {/* Messages */}
-        <ChatWindow messages={messages} isLoading={isLoading} />
-
-        {/* Escalation Form */}
-        {showEscalationForm && conversationId && (
-          <EscalationForm
-            conversationId={conversationId}
-            issueSummary={escalationSummary}
-            onSubmit={() => {
-              setShowEscalationForm(false);
-              fetchConversations();
+      {/* Right panel */}
+      <div style={{ padding: 18, display: 'flex', flexDirection: 'column' }}>
+        <div
+          style={{
+            flex: 1,
+            background: '#ffffff',
+            borderRadius: 12,
+            border: '1px solid #e2e8f0',
+            boxShadow: '0 1px 2px rgba(15,23,42,0.06)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+          }}
+        >
+          {/* Chat header */}
+          <div
+            style={{
+              padding: '12px 18px',
+              borderBottom: '1px solid #e2e8f0',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
             }}
-          />
-        )}
-
-        {/* Input Area */}
-        <div className="border-t border-gray-200 bg-white p-4 shrink-0">
-          <form
-            onSubmit={handleSubmit}
-            className="flex items-end gap-3 max-w-4xl mx-auto"
           >
-            <div className="flex-1 relative">
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={
-                  isEscalated
-                    ? 'This conversation has been escalated'
-                    : 'Describe your SALTO lock issue...'
-                }
-                disabled={isLoading || isEscalated}
-                rows={1}
-                className="w-full resize-none rounded-xl border border-gray-300 px-4 py-3 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400 placeholder:text-gray-400"
-                style={{ maxHeight: '120px' }}
-                onInput={(e) => {
-                  const target = e.target as HTMLTextAreaElement;
-                  target.style.height = 'auto';
-                  target.style.height = `${Math.min(target.scrollHeight, 120)}px`;
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 10,
+                background: '#991b1b',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#ffffff',
+                fontWeight: 900,
+                fontSize: 11,
+                flexShrink: 0,
+              }}
+            >
+              ELS
+            </div>
+            <div style={{ flex: 1 }}>
+              <div
+                style={{
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: '#0f172a',
+                }}
+              >
+                SALTO Customer Support
+              </div>
+              <div style={{ fontSize: 11, color: '#64748b' }}>
+                ELS Customer Care Agent
+              </div>
+            </div>
+            {/* Status indicator */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <span
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: '50%',
+                  background: isEscalated ? '#ef4444' : '#16a34a',
                 }}
               />
+              <span style={{ fontSize: 11, color: '#64748b' }}>
+                {isEscalated ? 'Escalated' : 'Online'}
+              </span>
             </div>
+          </div>
+
+          {/* Messages area */}
+          <div
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: 14,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
+            }}
+          >
+            {/* Welcome / status text when empty */}
+            {messages.length === 0 && (
+              <div
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 12,
+                }}
+              >
+                <div
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 14,
+                    background: '#991b1b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#ffffff',
+                    fontWeight: 900,
+                    fontSize: 16,
+                  }}
+                >
+                  ELS
+                </div>
+                <div
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: '#0f172a',
+                  }}
+                >
+                  SALTO Customer Support
+                </div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: '#64748b',
+                    textAlign: 'center',
+                    maxWidth: 340,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Online. Describe your lock issue and we&apos;ll help resolve
+                  it.
+                </div>
+              </div>
+            )}
+
+            {/* Messages */}
+            {messages.map((msg, i) => (
+              <div
+                key={i}
+                style={{
+                  display: 'flex',
+                  justifyContent:
+                    msg.role === 'user' ? 'flex-end' : 'flex-start',
+                }}
+              >
+                <div
+                  style={{
+                    maxWidth: '70%',
+                    padding: '10px 14px',
+                    fontSize: 13,
+                    lineHeight: 1.5,
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    borderRadius:
+                      msg.role === 'user'
+                        ? '14px 14px 4px 14px'
+                        : '14px 14px 14px 4px',
+                    background:
+                      msg.role === 'user' ? '#991b1b' : '#f1f5f9',
+                    color:
+                      msg.role === 'user' ? '#ffffff' : '#0f172a',
+                  }}
+                >
+                  {msg.content}
+                </div>
+              </div>
+            ))}
+
+            {/* Typing indicator */}
+            {isLoading && (
+              <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                <div
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: '14px 14px 14px 4px',
+                    background: '#f1f5f9',
+                    display: 'flex',
+                    gap: 4,
+                    alignItems: 'center',
+                  }}
+                >
+                  {[0, 1, 2].map((dot) => (
+                    <span
+                      key={dot}
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: '50%',
+                        background: '#94a3b8',
+                        animation: 'dotPulse 1.4s infinite ease-in-out',
+                        animationDelay: `${dot * 0.2}s`,
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Escalation form */}
+          {showEscalationForm && conversationId && (
+            <EscalationForm
+              conversationId={conversationId}
+              issueSummary={escalationSummary}
+              onSubmit={() => {
+                setShowEscalationForm(false);
+                fetchConversations();
+              }}
+            />
+          )}
+
+          {/* Input area */}
+          <div
+            style={{
+              padding: '12px 14px',
+              borderTop: '1px solid #e2e8f0',
+              display: 'flex',
+              alignItems: 'flex-end',
+              gap: 8,
+            }}
+          >
+            <textarea
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={
+                isEscalated
+                  ? 'This conversation has been escalated'
+                  : 'Describe your SALTO lock issue...'
+              }
+              disabled={isLoading || isEscalated}
+              rows={1}
+              style={{
+                flex: 1,
+                resize: 'none',
+                border: '1px solid #e2e8f0',
+                borderRadius: 10,
+                padding: '8px 12px',
+                fontSize: 13,
+                outline: 'none',
+                color: '#0f172a',
+                background: isEscalated ? '#f8fafc' : '#ffffff',
+                maxHeight: 120,
+                lineHeight: 1.5,
+              }}
+              onInput={(e) => {
+                const target = e.target as HTMLTextAreaElement;
+                target.style.height = 'auto';
+                target.style.height = `${Math.min(target.scrollHeight, 120)}px`;
+              }}
+            />
             <button
-              type="submit"
+              onClick={() => handleSubmit()}
               disabled={!input.trim() || isLoading || isEscalated}
-              className="rounded-xl bg-blue-600 p-3 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
-              aria-label="Send message"
+              style={{
+                background:
+                  !input.trim() || isLoading || isEscalated
+                    ? '#d1d5db'
+                    : '#991b1b',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: 10,
+                padding: '8px 16px',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor:
+                  !input.trim() || isLoading || isEscalated
+                    ? 'not-allowed'
+                    : 'pointer',
+                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+              }}
             >
               <svg
-                className="w-5 h-5"
+                width="16"
+                height="16"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -393,11 +801,9 @@ export default function ChatPage() {
                   d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
                 />
               </svg>
+              Send
             </button>
-          </form>
-          <p className="text-center text-xs text-gray-400 mt-2">
-            SALTO Electronic Lock Support - Powered by AI
-          </p>
+          </div>
         </div>
       </div>
     </div>

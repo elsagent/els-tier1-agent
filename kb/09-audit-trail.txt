@@ -1,0 +1,64 @@
+SALTO ProAccess SPACE - Viewing the Audit Trail
+=================================================
+
+The audit trail is a log of every event at a door: who opened it, when,
+and whether access was granted or denied. This is useful for security
+investigations, guest complaints, and maintenance troubleshooting.
+
+STEP-BY-STEP: VIEWING THE AUDIT TRAIL
+
+Open ProAccess SPACE
+1. Open ProAccess SPACE in your web browser and log in.
+
+Find the Door
+2. From the dashboard, click on "Doors" or "Access Points" in the left
+   menu.
+
+3. Search for the door by room number or door name. Click on it to open
+   its details.
+
+Open the Audit Trail
+4. In the door's detail page, look for the "Audit Trail" or "Events"
+   tab or button. Click on it.
+
+5. Some versions of ProAccess SPACE show this under "Monitoring" in
+   the main menu instead.
+
+Select the Date Range
+6. Set the start date and end date for the time period you want to
+   review. For example, if a guest reports a problem last night, set
+   the range to cover that night.
+
+7. Click "Search" or "Apply" to load the events for that period.
+
+Reading the Audit Trail Log
+8. The log shows events in chronological order. Each entry includes:
+   - Date and time of the event.
+   - Cardholder name (who presented the card).
+   - Event type: "Access Granted," "Access Denied," "Door Opened,"
+     "Door Left Open," "Passage Mode On/Off," etc.
+   - Reason for denial if applicable (expired card, wrong zone,
+     low battery, etc.).
+
+9. Look for patterns. For example:
+   - Multiple "Access Denied" entries may indicate a bad card or
+     wrong permissions.
+   - "Door Left Open" alerts may point to a hardware issue.
+   - Unknown cardholder names could indicate a security concern.
+
+Export the Audit Trail
+10. To save or print the log, look for an "Export" or "Download" button.
+
+11. Choose your preferred format (CSV or PDF are common options).
+
+12. Save the file to your computer. This is useful for attaching to
+    incident reports or emailing to management.
+
+TIPS
+- If the audit trail is empty for an offline lock, the events are stored
+  in the lock itself and will upload once the lock reconnects or is
+  updated with the PPD.
+- Audit trail access may be restricted based on your user role. If you
+  cannot see the audit trail, ask your manager or system administrator.
+- For a cardholder-based view (everywhere a specific person went), look
+  for an audit option on the cardholder's profile page instead.

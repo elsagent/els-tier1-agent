@@ -18,6 +18,32 @@ export async function runTriage(
     content: userMessage,
   });
 
+  // First attempt
+  let result = await attemptClassification(threadId);
+  if (result) return result;
+
+  // If the assistant responded with text instead of calling the function,
+  // nudge it to classify
+  await openai.beta.threads.messages.create(threadId, {
+    role: 'user',
+    content: 'Please classify my issue now using the classify_issue function.',
+  });
+
+  result = await attemptClassification(threadId);
+  if (result) return result;
+
+  // Final fallback
+  return {
+    tier: 'escalate',
+    category: 'unknown',
+    confidence: 0,
+    summary: userMessage.slice(0, 200),
+  };
+}
+
+async function attemptClassification(
+  threadId: string
+): Promise<TriageResult | null> {
   const run = await openai.beta.threads.runs.createAndPoll(threadId, {
     assistant_id: TRIAGE_ASSISTANT_ID,
   });
@@ -58,10 +84,5 @@ export async function runTriage(
     }
   }
 
-  return {
-    tier: 'escalate',
-    category: 'unknown',
-    confidence: 0,
-    summary: 'Could not classify',
-  };
+  return null;
 }
