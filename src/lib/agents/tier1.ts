@@ -2,6 +2,11 @@ import { openai } from '../openai';
 
 const TIER1_ASSISTANT_ID = process.env.TIER1_ASSISTANT_ID!;
 
+// Strip OpenAI file_search citation annotations like 【8:2†filename.pdf】
+function stripCitations(text: string): string {
+  return text.replace(/【[^】]*】/g, '');
+}
+
 export async function* runTier1(
   threadId: string,
   userMessage: string | null
@@ -23,7 +28,8 @@ export async function* runTier1(
       if (delta.content) {
         for (const block of delta.content) {
           if (block.type === 'text' && block.text?.value) {
-            yield block.text.value;
+            const cleaned = stripCitations(block.text.value);
+            if (cleaned) yield cleaned;
           }
         }
       }

@@ -35,6 +35,8 @@ const RESPONSIVE_CSS = `
 @media (min-width: 769px) {
   .els-mobile-header { display: none !important; }
 }
+.els-layout.no-sidebar { grid-template-columns: 1fr !important; }
+.els-layout.no-sidebar .els-sidebar { display: none !important; }
 `;
 
 export default function Tier2ChatPage() {
@@ -147,7 +149,7 @@ export default function Tier2ChatPage() {
   return (
     <>
       <style>{RESPONSIVE_CSS}</style>
-      <div className="els-layout" style={{ height: '100vh', display: 'grid', gridTemplateColumns: '280px 1fr', fontFamily: "'Inter', system-ui, -apple-system, sans-serif", background: 'linear-gradient(160deg, #f0f4ff 0%, #f8fafc 40%, #fef7f0 70%, #fdf2f4 100%)' }}>
+      <div className={`els-layout${messages.length === 0 && !isLoading ? ' no-sidebar' : ''}`} style={{ height: '100vh', display: 'grid', gridTemplateColumns: '280px 1fr', fontFamily: "'Inter', system-ui, -apple-system, sans-serif", background: 'linear-gradient(160deg, #f0f4ff 0%, #f8fafc 40%, #fef7f0 70%, #fdf2f4 100%)' }}>
 
         {/* ─── Sidebar ─── */}
         <aside className="els-sidebar" style={{ background: 'linear-gradient(180deg, #ffffff 0%, #fafaf9 100%)', borderRight: '1px solid rgba(176,18,44,0.06)', display: 'flex', flexDirection: 'column', height: '100vh', overflowY: 'auto' }}>

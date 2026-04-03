@@ -90,6 +90,8 @@ const RESPONSIVE_CSS = `
 @media (min-width: 769px) {
   .els-mobile-header { display: none !important; }
 }
+.els-layout.no-sidebar { grid-template-columns: 1fr !important; }
+.els-layout.no-sidebar .els-sidebar { display: none !important; }
 `;
 
 export default function Tier1ChatPage() {
@@ -246,7 +248,7 @@ export default function Tier1ChatPage() {
     <>
       <style>{RESPONSIVE_CSS}</style>
       <div
-        className="els-layout"
+        className={`els-layout${!hasMessages ? ' no-sidebar' : ''}`}
         style={{
           height: '100vh',
           display: 'grid',
