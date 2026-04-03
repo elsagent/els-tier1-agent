@@ -6,18 +6,20 @@ import { runTier2 } from '@/lib/agents/tier2';
 export const runtime = 'nodejs';
 export const maxDuration = 120;
 
+// Anonymous user ID for unauthenticated sessions
+const ANON_USER_ID = '00000000-0000-0000-0000-000000000000';
+
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
 
-    if (!user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    // Try to get user but don't require auth
+    let userId = ANON_USER_ID;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) userId = user.id;
+    } catch {
+      // continue as anonymous
     }
 
     const body = await request.json();
@@ -50,7 +52,7 @@ export async function POST(request: Request) {
         .from('conversations')
         .select('*')
         .eq('id', conversationId)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .single();
 
       if (error || !conversation) {
@@ -89,7 +91,7 @@ export async function POST(request: Request) {
       const { data: newConv, error } = await supabase
         .from('conversations')
         .insert({
-          user_id: user.id,
+          user_id: userId,
           thread_id: threadId,
           tier: tier,
           status: 'active',

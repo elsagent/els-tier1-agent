@@ -1,15 +1,18 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
+const ANON_USER_ID = '00000000-0000-0000-0000-000000000000';
+
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    let userId = ANON_USER_ID;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) userId = user.id;
+    } catch {
+      // continue as anonymous
     }
 
     const body = await request.json();
@@ -36,12 +39,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Verify the conversation belongs to the user
+    // Verify the conversation exists
     const { data: conversation, error: convError } = await supabase
       .from('conversations')
       .select('id')
       .eq('id', conversationId)
-      .eq('user_id', user.id)
       .single();
 
     if (convError || !conversation) {
@@ -56,7 +58,7 @@ export async function POST(request: Request) {
       .from('escalations')
       .insert({
         conversation_id: conversationId,
-        user_id: user.id,
+        user_id: userId,
         contact_name: contactName,
         contact_email: contactEmail || null,
         contact_phone: contactPhone || null,
