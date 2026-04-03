@@ -1,29 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [hoverButton, setHoverButton] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { error } = await supabase.auth.signInWithOtp({ email });
 
     if (error) {
       setError(error.message);
@@ -31,8 +25,8 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/chat");
-    router.refresh();
+    setSent(true);
+    setLoading(false);
   };
 
   const inputStyle = (field: string): React.CSSProperties => ({
@@ -57,24 +51,133 @@ export default function LoginPage() {
     marginBottom: 6,
   };
 
+  if (sent) {
+    return (
+      <>
+        {/* ELS Logo */}
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
+          <div
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 14,
+              background: "#B0122C",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#ffffff",
+              fontWeight: 900,
+              fontSize: 16,
+              letterSpacing: 0.5,
+              boxShadow: "0 4px 24px rgba(176,18,44,0.2)",
+            }}
+          >
+            ELS
+          </div>
+        </div>
+
+        {/* Email icon */}
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 9999,
+              background: "#ecfdf5",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <svg
+              width="28"
+              height="28"
+              fill="none"
+              stroke="#16a34a"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2.5}
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          </div>
+        </div>
+
+        <h1
+          style={{
+            margin: "0 0 8px 0",
+            textAlign: "center",
+            fontSize: 22,
+            fontWeight: 700,
+            color: "#0f172a",
+            letterSpacing: "-0.01em",
+          }}
+        >
+          Check your email
+        </h1>
+        <p
+          style={{
+            margin: "0 0 0 0",
+            textAlign: "center",
+            fontSize: 14,
+            color: "#64748b",
+            lineHeight: 1.6,
+          }}
+        >
+          We sent a magic link to{" "}
+          <span style={{ fontWeight: 600, color: "#0f172a" }}>{email}</span>.
+          Click the link to sign in.
+        </p>
+        <p
+          style={{
+            marginTop: 24,
+            textAlign: "center",
+            fontSize: 14,
+            color: "#64748b",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setSent(false)}
+            style={{
+              fontWeight: 600,
+              color: "#B0122C",
+              textDecoration: "none",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              fontSize: 14,
+              fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+            }}
+          >
+            Try a different email
+          </button>
+        </p>
+      </>
+    );
+  }
+
   return (
     <>
       {/* ELS Logo */}
-      <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
         <div
           style={{
-            width: 48,
-            height: 48,
-            borderRadius: 14,
-            background: "#B0122C",
+            width: 56,
+            height: 56,
+            borderRadius: 16,
+            background: "linear-gradient(135deg, #B0122C 0%, #D4365C 100%)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             color: "#ffffff",
             fontWeight: 900,
-            fontSize: 16,
+            fontSize: 18,
             letterSpacing: 0.5,
-            boxShadow: "0 4px 24px rgba(176,18,44,0.2)",
+            boxShadow: "0 8px 32px rgba(176,18,44,0.25), 0 4px 12px rgba(176,18,44,0.15)",
           }}
         >
           ELS
@@ -83,28 +186,38 @@ export default function LoginPage() {
 
       <h1
         style={{
-          margin: "0 0 6px 0",
+          margin: "0 0 4px 0",
           textAlign: "center",
-          fontSize: 22,
+          fontSize: 24,
           fontWeight: 700,
           color: "#0f172a",
-          letterSpacing: "-0.01em",
+          letterSpacing: "-0.02em",
         }}
       >
-        Welcome back
+        Welcome to ELS
       </h1>
       <p
         style={{
-          margin: "0 0 32px 0",
+          margin: "0 0 8px 0",
           textAlign: "center",
           fontSize: 14,
           color: "#64748b",
         }}
       >
-        Sign in to ELS Customer Care
+        SALTO Lock Support Portal
+      </p>
+      <p
+        style={{
+          margin: "0 0 32px 0",
+          textAlign: "center",
+          fontSize: 12,
+          color: "#94a3b8",
+        }}
+      >
+        Enter your email to receive a sign-in link
       </p>
 
-      <form onSubmit={handleLogin}>
+      <form onSubmit={handleMagicLink}>
         <div style={{ marginBottom: 16 }}>
           <label htmlFor="email" style={labelStyle}>
             Email address
@@ -119,23 +232,6 @@ export default function LoginPage() {
             onBlur={() => setFocusedField(null)}
             placeholder="you@example.com"
             style={inputStyle("email")}
-          />
-        </div>
-
-        <div style={{ marginBottom: 16 }}>
-          <label htmlFor="password" style={labelStyle}>
-            Password
-          </label>
-          <input
-            id="password"
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onFocus={() => setFocusedField("password")}
-            onBlur={() => setFocusedField(null)}
-            placeholder="Enter your password"
-            style={inputStyle("password")}
           />
         </div>
 
@@ -166,7 +262,7 @@ export default function LoginPage() {
             fontSize: 14,
             fontWeight: 600,
             color: "#ffffff",
-            background: loading ? "#B0122C" : hoverButton ? "#8E0F23" : "#B0122C",
+            background: loading ? "#B0122C" : hoverButton ? "linear-gradient(135deg, #8E0F23 0%, #B0122C 100%)" : "linear-gradient(135deg, #B0122C 0%, #D4365C 100%)",
             border: "none",
             borderRadius: 12,
             cursor: loading ? "not-allowed" : "pointer",
@@ -176,30 +272,9 @@ export default function LoginPage() {
             boxShadow: hoverButton && !loading ? "0 4px 12px rgba(176,18,44,0.3)" : "none",
           }}
         >
-          {loading ? "Signing in..." : "Sign in"}
+          {loading ? "Sending magic link..." : "Send magic link"}
         </button>
       </form>
-
-      <p
-        style={{
-          marginTop: 24,
-          textAlign: "center",
-          fontSize: 14,
-          color: "#64748b",
-        }}
-      >
-        Don&apos;t have an account?{" "}
-        <Link
-          href="/signup"
-          style={{
-            fontWeight: 600,
-            color: "#B0122C",
-            textDecoration: "none",
-          }}
-        >
-          Sign up
-        </Link>
-      </p>
     </>
   );
 }

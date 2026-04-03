@@ -181,7 +181,7 @@ export default function Tier2ChatPage() {
         height: '100vh',
         display: 'flex',
         flexDirection: 'column',
-        background: '#fafaf9',
+        background: 'linear-gradient(160deg, #f0f4ff 0%, #f8fafc 40%, #fef7f0 70%, #fdf2f4 100%)',
       }}
     >
       {/* Header */}
@@ -189,12 +189,12 @@ export default function Tier2ChatPage() {
         style={{
           height: 56,
           minHeight: 56,
-          background: '#ffffff',
-          borderBottom: '1px solid rgba(15,23,42,0.06)',
+          background: 'linear-gradient(135deg, #ffffff 0%, #f8f5ff 50%, #fff5f0 100%)',
+          borderBottom: '1px solid rgba(176,18,44,0.06)',
           display: 'flex',
           alignItems: 'center',
           padding: '0 20px',
-          boxShadow: '0 1px 3px rgba(15,23,42,0.04)',
+          boxShadow: '0 1px 8px rgba(176,18,44,0.04), 0 1px 3px rgba(15,23,42,0.03)',
           zIndex: 10,
         }}
       >
@@ -205,7 +205,7 @@ export default function Tier2ChatPage() {
               width: 32,
               height: 32,
               borderRadius: 8,
-              background: '#B0122C',
+              background: 'linear-gradient(135deg, #B0122C 0%, #D4365C 100%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -214,6 +214,7 @@ export default function Tier2ChatPage() {
               fontSize: 11,
               letterSpacing: 0.5,
               flexShrink: 0,
+              boxShadow: '0 2px 8px rgba(176,18,44,0.25)',
             }}
           >
             ELS
@@ -382,21 +383,23 @@ export default function Tier2ChatPage() {
               <div
                 style={{
                   marginTop: 8,
-                  padding: '14px 20px',
-                  background: '#ffffff',
-                  border: '1px solid rgba(15,23,42,0.06)',
-                  borderRadius: 12,
+                  padding: '16px 24px',
+                  background: 'rgba(255,255,255,0.7)',
+                  backdropFilter: 'blur(8px)',
+                  border: '1px solid rgba(176,18,44,0.08)',
+                  borderRadius: 14,
                   maxWidth: 440,
                   width: '100%',
+                  boxShadow: '0 2px 12px rgba(176,18,44,0.04)',
                 }}
               >
                 <p
                   style={{
                     margin: 0,
                     fontSize: 13,
-                    color: '#94a3b8',
+                    color: '#64748b',
                     textAlign: 'center',
-                    lineHeight: 1.5,
+                    lineHeight: 1.6,
                   }}
                 >
                   Describe your technical issue in detail below. Include model numbers, error codes, and what you have already tried.
@@ -453,17 +456,24 @@ export default function Tier2ChatPage() {
                       ? '18px 18px 4px 18px'
                       : '18px 18px 18px 4px',
                   background:
-                    msg.role === 'user' ? '#B0122C' : '#ffffff',
+                    msg.role === 'user'
+                      ? 'linear-gradient(135deg, #B0122C 0%, #C41E3A 100%)'
+                      : 'rgba(255,255,255,0.9)',
+                  backdropFilter: msg.role === 'assistant' ? 'blur(8px)' : undefined,
                   color:
-                    msg.role === 'user' ? '#ffffff' : '#0f172a',
+                    msg.role === 'user' ? '#ffffff' : '#1e293b',
                   border:
                     msg.role === 'assistant'
-                      ? '1px solid rgba(15,23,42,0.06)'
+                      ? '1px solid rgba(176,18,44,0.06)'
                       : 'none',
+                  borderLeft:
+                    msg.role === 'assistant'
+                      ? '3px solid rgba(176,18,44,0.15)'
+                      : undefined,
                   boxShadow:
                     msg.role === 'user'
-                      ? '0 2px 8px rgba(176,18,44,0.15)'
-                      : '0 1px 3px rgba(15,23,42,0.04)',
+                      ? '0 4px 12px rgba(176,18,44,0.2)'
+                      : '0 2px 8px rgba(15,23,42,0.04)',
                 }}
               >
                 {msg.content}
@@ -547,9 +557,10 @@ export default function Tier2ChatPage() {
       {/* Input area */}
       <div
         style={{
-          background: '#ffffff',
-          borderTop: '1px solid rgba(15,23,42,0.06)',
+          background: 'linear-gradient(180deg, rgba(255,255,255,0.9) 0%, #ffffff 100%)',
+          borderTop: '1px solid rgba(176,18,44,0.06)',
           padding: '14px 20px',
+          boxShadow: '0 -2px 12px rgba(15,23,42,0.03)',
         }}
       >
         <div
@@ -624,7 +635,8 @@ export default function Tier2ChatPage() {
                   background:
                     !input.trim() || isInputDisabled
                       ? '#d1d5db'
-                      : '#B0122C',
+                      : 'linear-gradient(135deg, #B0122C 0%, #D4365C 100%)',
+                  boxShadow: !input.trim() || isInputDisabled ? 'none' : '0 4px 12px rgba(176,18,44,0.3)',
                   color: '#ffffff',
                   border: 'none',
                   cursor:
