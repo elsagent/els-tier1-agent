@@ -4,6 +4,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "ELS Customer Care",
   description: "ELS Tier-1 Customer Care Agent",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
@@ -18,9 +21,11 @@ export default function RootLayout({
           margin: 0,
           padding: 0,
           height: "100%",
-          fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+          fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
           color: "#0f172a",
           background: "#f8fafc",
+          WebkitFontSmoothing: "antialiased",
+          MozOsxFontSmoothing: "grayscale",
         }}
       >
         {children}

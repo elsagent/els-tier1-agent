@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
 import { openai } from '@/lib/openai';
-import { runTriage } from '@/lib/agents/triage';
 import { runTier1 } from '@/lib/agents/tier1';
 import { runTier2 } from '@/lib/agents/tier2';
 
@@ -22,9 +21,10 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { message, conversationId } = body as {
+    const { message, conversationId, tier } = body as {
       message: string;
       conversationId?: string;
+      tier?: 'tier1' | 'tier2';
     };
 
     if (!message || typeof message !== 'string') {
@@ -34,9 +34,16 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!tier || (tier !== 'tier1' && tier !== 'tier2')) {
+      return new Response(
+        JSON.stringify({ error: 'Valid tier (tier1 or tier2) is required' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     let convId: string;
     let threadId: string;
-    let currentTier: string = 'triage';
+    let currentTier: string = tier;
 
     if (conversationId) {
       const { data: conversation, error } = await supabase
@@ -55,7 +62,7 @@ export async function POST(request: Request) {
 
       convId = conversation.id;
       threadId = conversation.thread_id;
-      currentTier = conversation.tier || 'triage';
+      currentTier = conversation.tier || tier;
 
       if (conversation.status === 'escalated') {
         const encoder = new TextEncoder();
@@ -84,7 +91,7 @@ export async function POST(request: Request) {
         .insert({
           user_id: user.id,
           thread_id: threadId,
-          tier: 'triage',
+          tier: tier,
           status: 'active',
           title: message.slice(0, 80),
         })
@@ -128,82 +135,83 @@ export async function POST(request: Request) {
 
           let fullAssistantMessage = '';
           let isEscalated = false;
+          let isEscalatedToTier2 = false;
 
-          if (currentTier === 'triage') {
-            // Run triage to classify the issue
-            const triageResult = await runTriage(threadId, message);
+          // Determine which agent to run based on current tier
+          const agentRunner = currentTier === 'tier2' ? runTier2 : runTier1;
 
-            send({
-              type: 'triage',
-              tier: triageResult.tier,
-              category: triageResult.category,
-              confidence: triageResult.confidence,
-            });
+          for await (const chunk of agentRunner(threadId, message)) {
+            // Handle Tier 1 -> Tier 2 escalation
+            if (chunk === '[ESCALATE_TO_TIER2]') {
+              isEscalatedToTier2 = true;
 
-            if (triageResult.tier === 'escalate') {
-              // Update conversation and prompt escalation
+              // Update conversation tier in Supabase
               await supabase
                 .from('conversations')
-                .update({ status: 'escalated', tier: 'escalate', category: triageResult.category })
+                .update({ tier: 'tier2' })
                 .eq('id', convId);
 
-              isEscalated = true;
-              fullAssistantMessage = `I understand you're experiencing an issue with: ${triageResult.summary}. This requires assistance from our specialized support team. Let me connect you with a human technician who can help.`;
-              send({ type: 'text', content: fullAssistantMessage });
-              send({ type: 'escalate', content: fullAssistantMessage });
-            } else {
-              // Route to tier1 or tier2 — run on the SAME thread for context continuity
-              const tier = triageResult.tier; // 'tier1' or 'tier2'
+              // Send escalation event to client
+              send({
+                type: 'tier2_escalation',
+                content: 'This issue needs our technical team. Transferring you now...',
+              });
 
-              await supabase
-                .from('conversations')
-                .update({ tier, category: triageResult.category })
-                .eq('id', convId);
-
-              // The triage agent already consumed the user message on this thread,
-              // so pass null to avoid duplicating it
-              const agentRunner = tier === 'tier2' ? runTier2 : runTier1;
-
-              for await (const chunk of agentRunner(threadId, null)) {
-                if (chunk === '[ESCALATE]') {
-                  isEscalated = true;
-                  await supabase
-                    .from('conversations')
-                    .update({ status: 'escalated', tier: 'escalate' })
-                    .eq('id', convId);
-                  continue;
-                }
-
-                if (isEscalated) {
-                  fullAssistantMessage += chunk;
-                  send({ type: 'escalate', content: chunk });
-                } else {
-                  fullAssistantMessage += chunk;
-                  send({ type: 'text', content: chunk });
-                }
-              }
+              continue;
             }
-          } else if (currentTier === 'tier1' || currentTier === 'tier2') {
-            // Continuing conversation in assigned tier
-            const agentRunner = currentTier === 'tier2' ? runTier2 : runTier1;
 
-            for await (const chunk of agentRunner(threadId, message)) {
-              if (chunk === '[ESCALATE]') {
-                isEscalated = true;
-                await supabase
-                  .from('conversations')
-                  .update({ status: 'escalated', tier: 'escalate' })
-                  .eq('id', convId);
-                continue;
-              }
+            // If we just got the escalation signal, next chunk is the summary JSON
+            if (isEscalatedToTier2 && chunk.startsWith('{')) {
+              try {
+                const escalationData = JSON.parse(chunk);
+                // Now run Tier 2 agent with context
+                const tier2Message = `[Escalated from Quick Support] Previous conversation context: ${escalationData.summary}. Please continue helping this customer with their issue.`;
 
-              if (isEscalated) {
-                fullAssistantMessage += chunk;
-                send({ type: 'escalate', content: chunk });
-              } else {
+                let tier2FullMessage = '';
+                for await (const t2chunk of runTier2(threadId, tier2Message)) {
+                  if (t2chunk === '[ESCALATE]') {
+                    isEscalated = true;
+                    await supabase
+                      .from('conversations')
+                      .update({ status: 'escalated', tier: 'escalate' })
+                      .eq('id', convId);
+                    continue;
+                  }
+
+                  if (isEscalated) {
+                    tier2FullMessage += t2chunk;
+                    send({ type: 'escalate', content: t2chunk, summary: t2chunk });
+                  } else {
+                    tier2FullMessage += t2chunk;
+                    send({ type: 'text', content: t2chunk });
+                  }
+                }
+
+                fullAssistantMessage += tier2FullMessage;
+              } catch {
+                // Not JSON, treat as regular text
                 fullAssistantMessage += chunk;
                 send({ type: 'text', content: chunk });
               }
+              continue;
+            }
+
+            // Handle human escalation
+            if (chunk === '[ESCALATE]') {
+              isEscalated = true;
+              await supabase
+                .from('conversations')
+                .update({ status: 'escalated', tier: 'escalate' })
+                .eq('id', convId);
+              continue;
+            }
+
+            if (isEscalated) {
+              fullAssistantMessage += chunk;
+              send({ type: 'escalate', content: chunk, summary: chunk });
+            } else {
+              fullAssistantMessage += chunk;
+              send({ type: 'text', content: chunk });
             }
           }
 

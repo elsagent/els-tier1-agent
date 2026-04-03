@@ -21,6 +21,7 @@ export default function EscalationForm({
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
+  const [focusedField, setFocusedField] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,65 +60,72 @@ export default function EscalationForm({
     }
   };
 
-  const inputStyle: React.CSSProperties = {
+  const inputStyle = (field: string): React.CSSProperties => ({
     width: '100%',
-    padding: '8px 12px',
+    padding: '10px 14px',
     fontSize: 13,
-    border: '1px solid #e2e8f0',
+    border: focusedField === field ? '1.5px solid #B0122C' : '1px solid rgba(15,23,42,0.08)',
     borderRadius: 10,
     outline: 'none',
     color: '#0f172a',
     background: '#ffffff',
-  };
+    transition: 'all 0.15s ease',
+    boxShadow: focusedField === field ? '0 0 0 3px rgba(176,18,44,0.08)' : 'none',
+    fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+  });
 
   const labelStyle: React.CSSProperties = {
     display: 'block',
     fontSize: 12,
-    fontWeight: 500,
+    fontWeight: 600,
     color: '#0f172a',
-    marginBottom: 4,
+    marginBottom: 6,
   };
 
   if (submitted) {
     return (
       <div
         style={{
-          margin: '0 14px 14px 14px',
-          borderRadius: 12,
-          border: '1px solid #bbf7d0',
-          background: '#f0fdf4',
-          padding: 16,
+          borderRadius: 14,
+          border: '1px solid #a7f3d0',
+          background: '#ecfdf5',
+          padding: 20,
+          marginBottom: 14,
+          animation: 'slideInUp 0.3s ease',
         }}
       >
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 8,
-            marginBottom: 6,
+            gap: 10,
+            marginBottom: 8,
           }}
         >
-          <svg
-            width="18"
-            height="18"
-            fill="none"
-            stroke="#16a34a"
-            viewBox="0 0 24 24"
+          <div
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: '50%',
+              background: '#16a34a',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M5 13l4 4L19 7"
-            />
-          </svg>
-          <span style={{ fontWeight: 600, fontSize: 14, color: '#166534' }}>
-            Escalation Submitted
-          </span>
+            <svg width="16" height="16" fill="none" stroke="#ffffff" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: '#065f46' }}>
+              Escalation Submitted
+            </div>
+            <div style={{ fontSize: 13, color: '#15803d', marginTop: 2 }}>
+              Our support team will contact you shortly.
+            </div>
+          </div>
         </div>
-        <p style={{ fontSize: 13, color: '#15803d', margin: 0 }}>
-          Our support team will contact you shortly. Thank you for your patience.
-        </p>
       </div>
     );
   }
@@ -125,43 +133,53 @@ export default function EscalationForm({
   return (
     <div
       style={{
-        margin: '0 14px 14px 14px',
-        borderRadius: 12,
-        border: '1px solid #fecaca',
-        background: '#fee2e2',
-        padding: 16,
+        borderRadius: 14,
+        border: '1px solid rgba(176,18,44,0.15)',
+        background: 'linear-gradient(135deg, #fff5f5 0%, #ffffff 100%)',
+        padding: 24,
+        marginBottom: 14,
+        animation: 'escalationSlideIn 0.3s ease',
+        boxShadow: '0 4px 16px rgba(176,18,44,0.06)',
       }}
     >
-      <h3
-        style={{
-          margin: '0 0 4px 0',
-          fontWeight: 600,
-          fontSize: 14,
-          color: '#991b1b',
-        }}
-      >
-        Connect with Our Support Team
-      </h3>
-      <p
-        style={{
-          margin: '0 0 14px 0',
-          fontSize: 13,
-          color: '#64748b',
-        }}
-      >
-        Please provide your contact details so our team can follow up.
-      </p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+        <div
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #B0122C 0%, #D4365C 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <svg width="16" height="16" fill="none" stroke="#ffffff" viewBox="0 0 24 24" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        </div>
+        <div>
+          <h3 style={{ margin: 0, fontWeight: 700, fontSize: 15, color: '#0f172a' }}>
+            Connect with Our Team
+          </h3>
+          <p style={{ margin: 0, fontSize: 12, color: '#64748b' }}>
+            Provide your details so we can follow up directly
+          </p>
+        </div>
+      </div>
 
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: 10 }}>
+      <form onSubmit={handleSubmit} style={{ marginTop: 16 }}>
+        <div style={{ marginBottom: 12 }}>
           <label style={labelStyle}>
-            Name <span style={{ color: '#ef4444' }}>*</span>
+            Name <span style={{ color: '#B0122C' }}>*</span>
           </label>
           <input
             type="text"
             value={contactName}
             onChange={(e) => setContactName(e.target.value)}
-            style={inputStyle}
+            onFocus={() => setFocusedField('name')}
+            onBlur={() => setFocusedField(null)}
+            style={inputStyle('name')}
             placeholder="Your full name"
             required
           />
@@ -171,8 +189,8 @@ export default function EscalationForm({
           style={{
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
-            gap: 10,
-            marginBottom: 10,
+            gap: 12,
+            marginBottom: 12,
           }}
         >
           <div>
@@ -181,7 +199,9 @@ export default function EscalationForm({
               type="email"
               value={contactEmail}
               onChange={(e) => setContactEmail(e.target.value)}
-              style={inputStyle}
+              onFocus={() => setFocusedField('email')}
+              onBlur={() => setFocusedField(null)}
+              style={inputStyle('email')}
               placeholder="you@example.com"
             />
           </div>
@@ -191,31 +211,37 @@ export default function EscalationForm({
               type="tel"
               value={contactPhone}
               onChange={(e) => setContactPhone(e.target.value)}
-              style={inputStyle}
+              onFocus={() => setFocusedField('phone')}
+              onBlur={() => setFocusedField(null)}
+              style={inputStyle('phone')}
               placeholder="+1 (555) 000-0000"
             />
           </div>
         </div>
 
-        <div style={{ marginBottom: 10 }}>
+        <div style={{ marginBottom: 12 }}>
           <label style={labelStyle}>Property / Building Name</label>
           <input
             type="text"
             value={propertyName}
             onChange={(e) => setPropertyName(e.target.value)}
-            style={inputStyle}
+            onFocus={() => setFocusedField('property')}
+            onBlur={() => setFocusedField(null)}
+            style={inputStyle('property')}
             placeholder="e.g. Main Office Building"
           />
         </div>
 
-        <div style={{ marginBottom: 10 }}>
+        <div style={{ marginBottom: 14 }}>
           <label style={labelStyle}>Issue Summary</label>
           <textarea
             value={summary}
             onChange={(e) => setSummary(e.target.value)}
+            onFocus={() => setFocusedField('summary')}
+            onBlur={() => setFocusedField(null)}
             rows={2}
             style={{
-              ...inputStyle,
+              ...inputStyle('summary'),
               resize: 'none' as const,
             }}
             placeholder="Brief description of the issue"
@@ -223,9 +249,19 @@ export default function EscalationForm({
         </div>
 
         {error && (
-          <p style={{ fontSize: 13, color: '#ef4444', margin: '0 0 8px 0' }}>
+          <div
+            style={{
+              fontSize: 13,
+              color: '#ef4444',
+              margin: '0 0 10px 0',
+              padding: '8px 12px',
+              background: 'rgba(239,68,68,0.06)',
+              borderRadius: 8,
+              border: '1px solid rgba(239,68,68,0.15)',
+            }}
+          >
             {error}
-          </p>
+          </div>
         )}
 
         <button
@@ -233,18 +269,21 @@ export default function EscalationForm({
           disabled={submitting}
           style={{
             width: '100%',
-            padding: '10px 16px',
-            fontSize: 13,
+            padding: '11px 16px',
+            fontSize: 14,
             fontWeight: 600,
             color: '#ffffff',
-            background: '#991b1b',
+            background: submitting ? '#B0122C' : '#B0122C',
             border: 'none',
             borderRadius: 10,
             cursor: submitting ? 'not-allowed' : 'pointer',
-            opacity: submitting ? 0.6 : 1,
+            opacity: submitting ? 0.7 : 1,
+            transition: 'all 0.2s ease',
+            fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+            boxShadow: '0 2px 8px rgba(176,18,44,0.2)',
           }}
         >
-          {submitting ? 'Submitting...' : 'Submit Escalation'}
+          {submitting ? 'Submitting...' : 'Submit Escalation Request'}
         </button>
       </form>
     </div>
