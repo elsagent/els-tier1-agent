@@ -1,10 +1,11 @@
 import { createClient } from '@/lib/supabase/server';
 import { openai } from '@/lib/openai';
+import { runTriage } from '@/lib/agents/triage';
+import { runTier1 } from '@/lib/agents/tier1';
+import { runTier2 } from '@/lib/agents/tier2';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
-
-const WORKFLOW_ID = process.env.WORKFLOW_ID || 'wf_69ceed146fa48190940573b1a7a5692b0dad21fe73446d36';
 
 export async function POST(request: Request) {
   try {
@@ -34,10 +35,10 @@ export async function POST(request: Request) {
     }
 
     let convId: string;
-    let previousResponseId: string | null = null;
+    let threadId: string;
+    let currentTier: string = 'triage';
 
     if (conversationId) {
-      // Fetch existing conversation
       const { data: conversation, error } = await supabase
         .from('conversations')
         .select('*')
@@ -53,7 +54,8 @@ export async function POST(request: Request) {
       }
 
       convId = conversation.id;
-      previousResponseId = conversation.thread_id; // reusing thread_id column for response_id
+      threadId = conversation.thread_id;
+      currentTier = conversation.tier || 'triage';
 
       if (conversation.status === 'escalated') {
         const encoder = new TextEncoder();
@@ -73,12 +75,15 @@ export async function POST(request: Request) {
         });
       }
     } else {
-      // Create a new conversation
+      // Create OpenAI thread
+      const thread = await openai.beta.threads.create();
+      threadId = thread.id;
+
       const { data: newConv, error } = await supabase
         .from('conversations')
         .insert({
           user_id: user.id,
-          thread_id: '', // will be updated with response_id
+          thread_id: threadId,
           tier: 'triage',
           status: 'active',
           title: message.slice(0, 80),
@@ -103,13 +108,11 @@ export async function POST(request: Request) {
       content: message,
     });
 
-    // Update conversation timestamp
     await supabase
       .from('conversations')
       .update({ updated_at: new Date().toISOString() })
       .eq('id', convId);
 
-    // Create the SSE stream
     const encoder = new TextEncoder();
 
     const stream = new ReadableStream({
@@ -123,88 +126,85 @@ export async function POST(request: Request) {
         try {
           send({ type: 'meta', conversationId: convId });
 
-          // Call the Agent Builder workflow via Responses API
-          const responseParams: Record<string, unknown> = {
-            workflow: { id: WORKFLOW_ID },
-            input: message,
-            stream: true,
-          };
-
-          if (previousResponseId) {
-            responseParams.previous_response_id = previousResponseId;
-          }
-
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const responseStream = await openai.responses.create(
-            responseParams as any
-          ) as unknown as AsyncIterable<any>;
-
           let fullAssistantMessage = '';
-          let responseId = '';
           let isEscalated = false;
 
-          for await (const event of responseStream) {
-            // Capture the response ID for multi-turn
-            if ('response' in event && event.response?.id) {
-              responseId = event.response.id;
-            }
+          if (currentTier === 'triage') {
+            // Run triage to classify the issue
+            const triageResult = await runTriage(threadId, message);
 
-            // Handle text deltas
-            if (event.type === 'response.output_text.delta') {
-              const delta = (event as { delta?: string }).delta || '';
-              if (delta) {
-                fullAssistantMessage += delta;
-                send({ type: 'text', content: delta });
-              }
-            }
+            send({
+              type: 'triage',
+              tier: triageResult.tier,
+              category: triageResult.category,
+              confidence: triageResult.confidence,
+            });
 
-            // Handle completed response
-            if (event.type === 'response.completed' && event.response) {
-              responseId = event.response.id;
+            if (triageResult.tier === 'escalate') {
+              // Update conversation and prompt escalation
+              await supabase
+                .from('conversations')
+                .update({ status: 'escalated', tier: 'escalate', category: triageResult.category })
+                .eq('id', convId);
 
-              // Check if the workflow ended (escalate branch hit the End node)
-              const output = event.response.output;
-              if (Array.isArray(output)) {
-                for (const item of output) {
-                  if (item.type === 'message' && item.content) {
-                    // If we haven't streamed text yet, collect it
-                    for (const block of item.content) {
-                      if (block.type === 'output_text' && block.text && !fullAssistantMessage) {
-                        fullAssistantMessage = block.text;
-                        send({ type: 'text', content: block.text });
-                      }
-                    }
-                  }
+              isEscalated = true;
+              fullAssistantMessage = `I understand you're experiencing an issue with: ${triageResult.summary}. This requires assistance from our specialized support team. Let me connect you with a human technician who can help.`;
+              send({ type: 'text', content: fullAssistantMessage });
+              send({ type: 'escalate', content: fullAssistantMessage });
+            } else {
+              // Route to tier1 or tier2 — run on the SAME thread for context continuity
+              const tier = triageResult.tier; // 'tier1' or 'tier2'
+
+              await supabase
+                .from('conversations')
+                .update({ tier, category: triageResult.category })
+                .eq('id', convId);
+
+              // The triage agent already consumed the user message on this thread,
+              // so pass null to avoid duplicating it
+              const agentRunner = tier === 'tier2' ? runTier2 : runTier1;
+
+              for await (const chunk of agentRunner(threadId, null)) {
+                if (chunk === '[ESCALATE]') {
+                  isEscalated = true;
+                  await supabase
+                    .from('conversations')
+                    .update({ status: 'escalated', tier: 'escalate' })
+                    .eq('id', convId);
+                  continue;
+                }
+
+                if (isEscalated) {
+                  fullAssistantMessage += chunk;
+                  send({ type: 'escalate', content: chunk });
+                } else {
+                  fullAssistantMessage += chunk;
+                  send({ type: 'text', content: chunk });
                 }
               }
+            }
+          } else if (currentTier === 'tier1' || currentTier === 'tier2') {
+            // Continuing conversation in assigned tier
+            const agentRunner = currentTier === 'tier2' ? runTier2 : runTier1;
 
-              // Detect escalation: if the workflow ended via the End node (escalate branch),
-              // the response status will be 'completed' with no substantive output
-              // or the Tier 1 agent's output will contain escalation signals
-              const outputText = fullAssistantMessage.toLowerCase();
-              if (
-                outputText.includes('escalat') &&
-                (outputText.includes('human') || outputText.includes('support team') || outputText.includes('contact'))
-              ) {
+            for await (const chunk of agentRunner(threadId, message)) {
+              if (chunk === '[ESCALATE]') {
                 isEscalated = true;
+                await supabase
+                  .from('conversations')
+                  .update({ status: 'escalated', tier: 'escalate' })
+                  .eq('id', convId);
+                continue;
+              }
+
+              if (isEscalated) {
+                fullAssistantMessage += chunk;
+                send({ type: 'escalate', content: chunk });
+              } else {
+                fullAssistantMessage += chunk;
+                send({ type: 'text', content: chunk });
               }
             }
-          }
-
-          // Store the response ID for multi-turn continuity
-          if (responseId) {
-            await supabase
-              .from('conversations')
-              .update({ thread_id: responseId })
-              .eq('id', convId);
-          }
-
-          if (isEscalated) {
-            await supabase
-              .from('conversations')
-              .update({ status: 'escalated', tier: 'escalate' })
-              .eq('id', convId);
-            send({ type: 'escalate', content: fullAssistantMessage || 'This issue requires human support. Please provide your contact information.' });
           }
 
           // Save assistant message

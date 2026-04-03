@@ -3,7 +3,7 @@ import { openai } from '../openai';
 const TRIAGE_ASSISTANT_ID = process.env.TRIAGE_ASSISTANT_ID!;
 
 export interface TriageResult {
-  tier: 'tier1' | 'escalate';
+  tier: 'tier1' | 'tier2' | 'escalate';
   category: string;
   confidence: number;
   summary: string;
@@ -59,7 +59,7 @@ async function attemptClassification(
 
     if (classifyCall) {
       const args = JSON.parse(classifyCall.function.arguments) as {
-        tier: 'tier1' | 'escalate';
+        tier: 'tier1' | 'tier2' | 'escalate';
         category: string;
         confidence: number;
         summary: string;
