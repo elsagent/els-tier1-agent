@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   title: "ELS Customer Care",
   description: "ELS Tier-1 Customer Care Agent",
   icons: {
-    icon: "/favicon.ico",
+    icon: "/favicon.png",
   },
 };
 
