@@ -6,8 +6,8 @@ import { ChatKit, useChatKit } from '@openai/chatkit-react';
 
 // ─── Workflow ID (from env or hardcoded) ───
 const WORKFLOW_ID =
-  process.env.NEXT_PUBLIC_CHATKIT_WORKFLOW_ID ||
-  'wf_69ceed146fa48190940573b1a7a5692b0dad21fe73446d36';
+  process.env.NEXT_PUBLIC_TIER2_WORKFLOW_ID ||
+  'wf_69d0a542e3848190959b44b86655a8160771e444045c7538';
 
 // ─── Session helpers (localStorage/sessionStorage) ───
 const USER_KEY = 'els_tier2_user';
