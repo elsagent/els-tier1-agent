@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,6 +17,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" style={{ height: "100%" }}>
+      <head>
+        {/* ChatKit web component script — required for <ChatKit> React wrapper */}
+        <Script
+          src="https://cdn.platform.openai.com/deployments/chatkit/chatkit.js"
+          strategy="beforeInteractive"
+        />
+      </head>
       <body
         style={{
           margin: 0,

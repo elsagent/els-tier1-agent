@@ -135,6 +135,13 @@ html, body, #__next {
   }
 }
 
+/* ChatKit web component must fill its container */
+openai-chatkit {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 /* Subtle scrollbar styles */
 ::-webkit-scrollbar {
   width: 6px;

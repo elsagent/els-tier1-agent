@@ -1,6 +1,8 @@
 import { openai } from '../openai';
+import { TIER1_SYSTEM_PROMPT } from './prompts';
 
 const TIER1_WORKFLOW_ID = process.env.WORKFLOW_ID || process.env.TIER1_WORKFLOW_ID || '';
+const VECTOR_STORE_ID = process.env.OPENAI_VECTOR_STORE_ID || '';
 
 // Strip OpenAI file_search citation annotations like 【8:2†filename.pdf】
 function stripCitations(text: string): string {
@@ -8,25 +10,13 @@ function stripCitations(text: string): string {
 }
 
 /**
- * Run the Tier 1 agent using the Responses API with a workflow brain.
- * Uses previous_response_id for conversation continuity instead of threads.
+ * Process streamed events from the Responses API.
+ * Handles text deltas, function calls (escalate_to_tier2, escalate_to_human),
+ * and captures the response ID for conversation continuity.
  */
-export async function* runTier1(
-  previousResponseId: string | null,
-  userMessage: string
+async function* processStream(
+  stream: AsyncIterable<any>
 ): AsyncGenerator<string, void, unknown> {
-  const createParams: Record<string, unknown> = {
-    model: TIER1_WORKFLOW_ID,
-    input: userMessage,
-    stream: true,
-  };
-
-  if (previousResponseId) {
-    createParams.previous_response_id = previousResponseId;
-  }
-
-  const stream = await openai.responses.create(createParams as any);
-
   let responseId: string | null = null;
 
   for await (const event of stream as any) {
@@ -81,4 +71,87 @@ export async function* runTier1(
   if (responseId) {
     yield `[RESPONSE_ID:${responseId}]`;
   }
+}
+
+/**
+ * Run the Tier 1 agent using the Responses API with a workflow brain.
+ * Tries the Agent Builder workflow ID first. If the workflow ID isn't yet
+ * callable via API, falls back to gpt-4o + system prompt + file_search
+ * (matching the same brain/instructions configured in the workflow).
+ * Uses previous_response_id for conversation continuity instead of threads.
+ */
+export async function* runTier1(
+  previousResponseId: string | null,
+  userMessage: string
+): AsyncGenerator<string, void, unknown> {
+  // --- Attempt 1: Use the Agent Builder workflow as model ---
+  if (TIER1_WORKFLOW_ID) {
+    try {
+      const createParams: Record<string, unknown> = {
+        model: TIER1_WORKFLOW_ID,
+        input: userMessage,
+        stream: true,
+      };
+      if (previousResponseId) {
+        createParams.previous_response_id = previousResponseId;
+      }
+
+      const stream = await openai.responses.create(createParams as any);
+      yield* processStream(stream as any);
+      return; // Workflow succeeded — done
+    } catch (err: any) {
+      const msg = String(err?.message || err || '').toLowerCase();
+      // Only fall through if the workflow ID isn't recognized as a model
+      if (!msg.includes('model') && !msg.includes('not found') && !msg.includes('invalid')) {
+        throw err; // Re-throw non-model errors
+      }
+      console.warn('[Tier1] Workflow ID not yet callable via API, falling back to gpt-4o + file_search');
+    }
+  }
+
+  // --- Fallback: gpt-4o + system prompt + file_search (mirrors the workflow brain) ---
+  const fallbackParams: Record<string, unknown> = {
+    model: 'gpt-4o',
+    instructions: TIER1_SYSTEM_PROMPT,
+    input: userMessage,
+    stream: true,
+    tools: [
+      ...(VECTOR_STORE_ID
+        ? [{ type: 'file_search', vector_store_ids: [VECTOR_STORE_ID] }]
+        : []),
+      {
+        type: 'function',
+        name: 'escalate_to_tier2',
+        description: 'Escalate this issue to Tier 2 advanced support when it requires deeper technical troubleshooting beyond basic Tier 1 resolution steps.',
+        parameters: {
+          type: 'object',
+          properties: {
+            summary: { type: 'string', description: 'Brief summary of the issue and what was already tried' },
+            reason: { type: 'string', description: 'Why this needs Tier 2 support' },
+          },
+          required: ['summary'],
+        },
+      },
+      {
+        type: 'function',
+        name: 'escalate_to_human',
+        description: 'Escalate to a human support agent when the issue cannot be resolved through automated support.',
+        parameters: {
+          type: 'object',
+          properties: {
+            summary: { type: 'string', description: 'Brief summary of the issue' },
+            reason: { type: 'string', description: 'Why human support is needed' },
+          },
+          required: ['summary'],
+        },
+      },
+    ],
+  };
+
+  if (previousResponseId) {
+    fallbackParams.previous_response_id = previousResponseId;
+  }
+
+  const fallbackStream: any = await openai.responses.create(fallbackParams as any);
+  yield* processStream(fallbackStream as any);
 }
