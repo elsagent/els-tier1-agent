@@ -1,112 +1,84 @@
 import { openai } from '../openai';
 
-const TIER1_ASSISTANT_ID = process.env.TIER1_ASSISTANT_ID!;
+const TIER1_WORKFLOW_ID = process.env.WORKFLOW_ID || process.env.TIER1_WORKFLOW_ID || '';
 
 // Strip OpenAI file_search citation annotations like 【8:2†filename.pdf】
 function stripCitations(text: string): string {
   return text.replace(/【[^】]*】/g, '');
 }
 
+/**
+ * Run the Tier 1 agent using the Responses API with a workflow brain.
+ * Uses previous_response_id for conversation continuity instead of threads.
+ */
 export async function* runTier1(
-  threadId: string,
-  userMessage: string | null
+  previousResponseId: string | null,
+  userMessage: string
 ): AsyncGenerator<string, void, unknown> {
-  if (userMessage) {
-    await openai.beta.threads.messages.create(threadId, {
-      role: 'user',
-      content: userMessage,
-    });
+  const createParams: Record<string, unknown> = {
+    model: TIER1_WORKFLOW_ID,
+    input: userMessage,
+    stream: true,
+  };
+
+  if (previousResponseId) {
+    createParams.previous_response_id = previousResponseId;
   }
 
-  const stream = openai.beta.threads.runs.stream(threadId, {
-    assistant_id: TIER1_ASSISTANT_ID,
-  });
+  const stream = await openai.responses.create(createParams as any);
 
-  for await (const event of stream) {
-    if (event.event === 'thread.message.delta') {
-      const delta = event.data.delta;
-      if (delta.content) {
-        for (const block of delta.content) {
-          if (block.type === 'text' && block.text?.value) {
-            const cleaned = stripCitations(block.text.value);
-            if (cleaned) yield cleaned;
-          }
-        }
+  let responseId: string | null = null;
+
+  for await (const event of stream as any) {
+    const eventType = event?.type || '';
+
+    if (eventType === 'response.created') {
+      responseId = event.response?.id || null;
+    }
+
+    if (eventType === 'response.output_text.delta') {
+      const delta = event.delta || '';
+      if (delta) {
+        const cleaned = stripCitations(delta);
+        if (cleaned) yield cleaned;
       }
     }
 
-    if (event.event === 'thread.run.requires_action') {
-      const requiredAction = event.data.required_action;
-      if (requiredAction?.type === 'submit_tool_outputs') {
-        const toolCalls = requiredAction.submit_tool_outputs.tool_calls;
+    // Handle function calls from the workflow
+    if (eventType === 'response.function_call_arguments.done') {
+      const fnName = event.name || '';
+      const fnArgs = event.arguments || '{}';
 
-        // Check for escalate_to_tier2 (auto-escalation within the app)
-        const escalateToTier2Call = toolCalls.find(
-          (tc) => tc.function.name === 'escalate_to_tier2'
-        );
-
-        // Check for escalate_to_human (human handoff)
-        const escalateToHumanCall = toolCalls.find(
-          (tc) => tc.function.name === 'escalate_to_human'
-        );
-
-        if (escalateToTier2Call) {
-          const args = JSON.parse(escalateToTier2Call.function.arguments) as {
-            summary: string;
-            reason: string;
-          };
-
-          await openai.beta.threads.runs.submitToolOutputsAndPoll(
-            event.data.id,
-            {
-              thread_id: threadId,
-              tool_outputs: [
-                {
-                  tool_call_id: escalateToTier2Call.id,
-                  output: 'Escalation to Tier 2 registered. The conversation will now continue with the Tier 2 technical support agent.',
-                },
-              ],
-            }
-          );
-
+      if (fnName === 'escalate_to_tier2') {
+        try {
+          const args = JSON.parse(fnArgs) as { summary?: string; reason?: string };
           yield '[ESCALATE_TO_TIER2]';
-          yield JSON.stringify({ summary: args.summary || args.reason || 'Issue requires advanced troubleshooting' });
-        } else if (escalateToHumanCall) {
-          const args = JSON.parse(escalateToHumanCall.function.arguments) as {
-            summary: string;
-            reason: string;
-          };
-
-          await openai.beta.threads.runs.submitToolOutputsAndPoll(
-            event.data.id,
-            {
-              thread_id: threadId,
-              tool_outputs: [
-                {
-                  tool_call_id: escalateToHumanCall.id,
-                  output: 'Escalation registered',
-                },
-              ],
-            }
-          );
-
+          yield JSON.stringify({
+            summary: args.summary || args.reason || 'Issue requires advanced troubleshooting',
+          });
+        } catch {
+          yield '[ESCALATE_TO_TIER2]';
+          yield JSON.stringify({ summary: 'Issue requires advanced troubleshooting' });
+        }
+      } else if (fnName === 'escalate_to_human') {
+        try {
+          const args = JSON.parse(fnArgs) as { summary?: string; reason?: string };
           yield '[ESCALATE]';
-          yield args.summary || args.reason || 'Issue requires human support';
-        } else {
-          const toolOutputs = toolCalls.map((tc) => ({
-            tool_call_id: tc.id,
-            output: '',
-          }));
-
-          await openai.beta.threads.runs.submitToolOutputsAndPoll(
-            event.data.id,
-            {
-              thread_id: threadId,
-              tool_outputs: toolOutputs,
-            }
-          );
+          yield (args.summary || args.reason || 'Issue requires human support');
+        } catch {
+          yield '[ESCALATE]';
+          yield 'Issue requires human support';
         }
       }
     }
+
+    if (eventType === 'response.completed') {
+      responseId = event.response?.id || responseId;
+    }
+  }
+
+  // Yield the response ID so the caller can store it for conversation continuity
+  if (responseId) {
+    yield `[RESPONSE_ID:${responseId}]`;
   }
 }

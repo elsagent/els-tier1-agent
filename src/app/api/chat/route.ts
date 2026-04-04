@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server';
-import { openai } from '@/lib/openai';
 import { runTier1 } from '@/lib/agents/tier1';
 import { runTier2 } from '@/lib/agents/tier2';
 
@@ -44,7 +43,8 @@ export async function POST(request: Request) {
     }
 
     let convId: string;
-    let threadId: string;
+    // thread_id column now stores previous_response_id for Responses API continuity
+    let previousResponseId: string | null = null;
     let currentTier: string = tier;
 
     if (conversationId) {
@@ -63,7 +63,8 @@ export async function POST(request: Request) {
       }
 
       convId = conversation.id;
-      threadId = conversation.thread_id;
+      // thread_id now stores the previous_response_id
+      previousResponseId = conversation.thread_id || null;
       currentTier = conversation.tier || tier;
 
       if (conversation.status === 'escalated') {
@@ -84,15 +85,12 @@ export async function POST(request: Request) {
         });
       }
     } else {
-      // Create OpenAI thread
-      const thread = await openai.beta.threads.create();
-      threadId = thread.id;
-
+      // No thread creation needed — Responses API uses previous_response_id
       const { data: newConv, error } = await supabase
         .from('conversations')
         .insert({
           user_id: userId,
-          thread_id: threadId,
+          thread_id: '', // Will be updated with first response_id
           tier: tier,
           status: 'active',
           title: message.slice(0, 80),
@@ -138,11 +136,24 @@ export async function POST(request: Request) {
           let fullAssistantMessage = '';
           let isEscalated = false;
           let isEscalatedToTier2 = false;
+          let latestResponseId: string | null = previousResponseId;
 
           // Determine which agent to run based on current tier
           const agentRunner = currentTier === 'tier2' ? runTier2 : runTier1;
 
-          for await (const chunk of agentRunner(threadId, message)) {
+          for await (const chunk of agentRunner(previousResponseId, message)) {
+            // Capture response ID for conversation continuity
+            if (chunk.startsWith('[RESPONSE_ID:')) {
+              const rid = chunk.slice('[RESPONSE_ID:'.length, -1);
+              latestResponseId = rid;
+              // Update conversation with the latest response ID (stored in thread_id column)
+              await supabase
+                .from('conversations')
+                .update({ thread_id: rid })
+                .eq('id', convId);
+              continue;
+            }
+
             // Handle Tier 1 -> Tier 2 escalation
             if (chunk === '[ESCALATE_TO_TIER2]') {
               isEscalatedToTier2 = true;
@@ -166,11 +177,22 @@ export async function POST(request: Request) {
             if (isEscalatedToTier2 && chunk.startsWith('{')) {
               try {
                 const escalationData = JSON.parse(chunk);
-                // Now run Tier 2 agent with context
+                // Now run Tier 2 agent with context (fresh conversation, no previous_response_id from Tier 1)
                 const tier2Message = `[Escalated from Quick Support] Previous conversation context: ${escalationData.summary}. Please continue helping this customer with their issue.`;
 
                 let tier2FullMessage = '';
-                for await (const t2chunk of runTier2(threadId, tier2Message)) {
+                for await (const t2chunk of runTier2(null, tier2Message)) {
+                  // Capture Tier 2 response ID
+                  if (t2chunk.startsWith('[RESPONSE_ID:')) {
+                    const rid = t2chunk.slice('[RESPONSE_ID:'.length, -1);
+                    latestResponseId = rid;
+                    await supabase
+                      .from('conversations')
+                      .update({ thread_id: rid })
+                      .eq('id', convId);
+                    continue;
+                  }
+
                   if (t2chunk === '[ESCALATE]') {
                     isEscalated = true;
                     await supabase

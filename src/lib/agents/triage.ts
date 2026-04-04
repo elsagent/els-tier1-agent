@@ -1,6 +1,7 @@
 import { openai } from '../openai';
+import { TRIAGE_SYSTEM_PROMPT } from './prompts';
 
-const TRIAGE_ASSISTANT_ID = process.env.TRIAGE_ASSISTANT_ID!;
+const TRIAGE_WORKFLOW_ID = process.env.WORKFLOW_ID || process.env.TRIAGE_WORKFLOW_ID || '';
 
 export interface TriageResult {
   tier: 'tier1' | 'tier2' | 'escalate';
@@ -9,80 +10,79 @@ export interface TriageResult {
   summary: string;
 }
 
+/**
+ * Run the triage classification using the Responses API.
+ * Currently not used in the chat route (users select tier from UI),
+ * but available for future use.
+ */
 export async function runTriage(
-  threadId: string,
   userMessage: string
 ): Promise<TriageResult> {
-  await openai.beta.threads.messages.create(threadId, {
-    role: 'user',
-    content: userMessage,
-  });
+  try {
+    const response = await (openai.responses as any).create({
+      model: TRIAGE_WORKFLOW_ID || 'gpt-4o',
+      instructions: TRIAGE_SYSTEM_PROMPT,
+      input: userMessage,
+      tools: [
+        {
+          type: 'function',
+          name: 'classify_issue',
+          description: 'Classify the customer issue into a support tier and category',
+          parameters: {
+            type: 'object',
+            properties: {
+              tier: {
+                type: 'string',
+                enum: ['tier1', 'tier2', 'escalate'],
+                description: 'The support tier for this issue',
+              },
+              category: {
+                type: 'string',
+                description: 'The issue category',
+              },
+              confidence: {
+                type: 'number',
+                description: 'Confidence score from 0 to 1',
+              },
+              summary: {
+                type: 'string',
+                description: 'Brief summary of the issue',
+              },
+            },
+            required: ['tier', 'category', 'confidence', 'summary'],
+          },
+        },
+      ],
+    });
 
-  // First attempt
-  let result = await attemptClassification(threadId);
-  if (result) return result;
+    // Check for function call in the response output
+    const output = response.output || [];
+    for (const item of output) {
+      if (item.type === 'function_call' && item.name === 'classify_issue') {
+        const args = JSON.parse(item.arguments) as {
+          tier: 'tier1' | 'tier2' | 'escalate';
+          category: string;
+          confidence: number;
+          summary: string;
+        };
 
-  // If the assistant responded with text instead of calling the function,
-  // nudge it to classify
-  await openai.beta.threads.messages.create(threadId, {
-    role: 'user',
-    content: 'Please classify my issue now using the classify_issue function.',
-  });
+        return {
+          tier: args.confidence >= 0.7 ? args.tier : 'escalate',
+          category: args.category,
+          confidence: args.confidence,
+          summary: args.summary,
+        };
+      }
+    }
+  } catch (err) {
+    console.error('Triage classification error:', err);
+  }
 
-  result = await attemptClassification(threadId);
-  if (result) return result;
-
-  // Final fallback
+  // Fallback
   return {
     tier: 'escalate',
     category: 'unknown',
     confidence: 0,
     summary: userMessage.slice(0, 200),
   };
-}
-
-async function attemptClassification(
-  threadId: string
-): Promise<TriageResult | null> {
-  const run = await openai.beta.threads.runs.createAndPoll(threadId, {
-    assistant_id: TRIAGE_ASSISTANT_ID,
-  });
-
-  if (
-    run.status === 'requires_action' &&
-    run.required_action?.type === 'submit_tool_outputs'
-  ) {
-    const toolCalls = run.required_action.submit_tool_outputs.tool_calls;
-    const classifyCall = toolCalls.find(
-      (tc) => tc.function.name === 'classify_issue'
-    );
-
-    if (classifyCall) {
-      const args = JSON.parse(classifyCall.function.arguments) as {
-        tier: 'tier1' | 'tier2' | 'escalate';
-        category: string;
-        confidence: number;
-        summary: string;
-      };
-
-      await openai.beta.threads.runs.submitToolOutputsAndPoll(run.id, {
-        thread_id: threadId,
-        tool_outputs: [
-          {
-            tool_call_id: classifyCall.id,
-            output: 'Classification received',
-          },
-        ],
-      });
-
-      return {
-        tier: args.confidence >= 0.7 ? args.tier : 'escalate',
-        category: args.category,
-        confidence: args.confidence,
-        summary: args.summary,
-      };
-    }
-  }
-
-  return null;
 }
