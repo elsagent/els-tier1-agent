@@ -275,7 +275,7 @@ export default function Tier1ChatPage() {
               <img
                 src="/el-logo.png"
                 alt="Electronic Locksmith"
-                style={{ width: 48, height: 'auto', objectFit: 'contain', flexShrink: 0 }}
+                style={{ width: 60, height: 'auto', objectFit: 'contain', flexShrink: 0 }}
               />
               <div>
                 <div style={{ fontWeight: 800, fontSize: 14, color: '#0f172a', lineHeight: 1.2 }}>
@@ -400,7 +400,7 @@ export default function Tier1ChatPage() {
                 <path strokeLinecap="round" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <img src="/el-logo.png" alt="EL" style={{ width: 32, height: 'auto', marginRight: 8 }} />
+            <img src="/el-logo.png" alt="EL" style={{ width: 40, height: 'auto', marginRight: 8 }} />
             <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>Quick Support</span>
             <div style={{ flex: 1 }} />
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#16a34a', animation: 'onlinePulse 2s infinite' }} />
@@ -415,7 +415,7 @@ export default function Tier1ChatPage() {
                   <img
                     src="/el-logo.png"
                     alt="Electronic Locksmith"
-                    style={{ width: 120, height: 'auto', objectFit: 'contain' }}
+                    style={{ width: 140, height: 'auto', objectFit: 'contain' }}
                   />
                   <h2 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: '#0f172a' }}>
                     How can we help?
@@ -506,7 +506,7 @@ export default function Tier1ChatPage() {
                 return (
                   <div key={i} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start', marginBottom: 12, animation: 'slideInUp 0.25s ease', alignItems: 'flex-end', gap: 8 }}>
                     {msg.role === 'assistant' && (
-                      <img src="/el-logo.png" alt="EL" style={{ width: 26, height: 26, borderRadius: 6, objectFit: 'contain', flexShrink: 0, background: '#fff', border: '1px solid rgba(15,23,42,0.06)' }} />
+                      <img src="/el-logo.png" alt="EL" style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'contain', flexShrink: 0, background: '#fff', border: '1px solid rgba(15,23,42,0.06)' }} />
                     )}
                     <div style={{
                       maxWidth: '75%',
@@ -532,7 +532,7 @@ export default function Tier1ChatPage() {
               {/* Typing */}
               {isLoading && (
                 <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 12, alignItems: 'flex-end', gap: 8 }}>
-                  <img src="/el-logo.png" alt="EL" style={{ width: 26, height: 26, borderRadius: 6, objectFit: 'contain', flexShrink: 0, background: '#fff', border: '1px solid rgba(15,23,42,0.06)' }} />
+                  <img src="/el-logo.png" alt="EL" style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'contain', flexShrink: 0, background: '#fff', border: '1px solid rgba(15,23,42,0.06)' }} />
                   <div style={{ padding: '12px 16px', borderRadius: '18px 18px 18px 4px', background: '#ffffff', border: '1px solid rgba(15,23,42,0.06)', display: 'flex', gap: 4, alignItems: 'center' }}>
                     {[0, 1, 2].map((dot) => (
                       <span key={dot} style={{ width: 7, height: 7, borderRadius: '50%', background: '#94a3b8', animation: 'dotPulse 1.4s infinite ease-in-out', animationDelay: `${dot * 0.2}s` }} />

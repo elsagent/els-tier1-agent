@@ -155,7 +155,7 @@ export default function Tier2ChatPage() {
         <aside className="els-sidebar" style={{ background: 'linear-gradient(180deg, #ffffff 0%, #fafaf9 100%)', borderRight: '1px solid rgba(176,18,44,0.06)', display: 'flex', flexDirection: 'column', height: '100vh', overflowY: 'auto' }}>
           <div style={{ padding: '20px 16px 16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <img src="/el-logo.png" alt="Electronic Locksmith" style={{ width: 48, height: 'auto', objectFit: 'contain', flexShrink: 0 }} />
+              <img src="/el-logo.png" alt="Electronic Locksmith" style={{ width: 60, height: 'auto', objectFit: 'contain', flexShrink: 0 }} />
               <div>
                 <div style={{ fontWeight: 800, fontSize: 14, color: '#0f172a', lineHeight: 1.2 }}>Electronic Locksmith</div>
                 <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Technical Support</div>
@@ -205,7 +205,7 @@ export default function Tier2ChatPage() {
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', minWidth: 0 }}>
           {/* Mobile header */}
           <header className="els-mobile-header" style={{ height: 56, minHeight: 56, background: 'linear-gradient(135deg, #ffffff 0%, #f8f5ff 100%)', borderBottom: '1px solid rgba(176,18,44,0.06)', display: 'flex', alignItems: 'center', padding: '0 16px', boxShadow: '0 1px 8px rgba(176,18,44,0.04)', zIndex: 20 }}>
-            <img src="/el-logo.png" alt="EL" style={{ width: 32, height: 'auto', marginRight: 8 }} />
+            <img src="/el-logo.png" alt="EL" style={{ width: 40, height: 'auto', marginRight: 8 }} />
             <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>Technical Support</span>
             <div style={{ flex: 1 }} />
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#16a34a', animation: 'onlinePulse 2s infinite' }} />
@@ -216,7 +216,7 @@ export default function Tier2ChatPage() {
             <div style={{ maxWidth: 760, width: '100%', margin: '0 auto', padding: '20px 20px 0', flex: 1, display: 'flex', flexDirection: 'column' }}>
               {messages.length === 0 && !isLoading && (
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, animation: 'fadeIn 0.4s ease' }}>
-                  <img src="/el-logo.png" alt="Electronic Locksmith" style={{ width: 120, height: 'auto', objectFit: 'contain' }} />
+                  <img src="/el-logo.png" alt="Electronic Locksmith" style={{ width: 140, height: 'auto', objectFit: 'contain' }} />
                   <h2 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: '#0f172a' }}>Advanced SALTO Support</h2>
                   <p style={{ margin: 0, fontSize: 15, color: '#64748b', textAlign: 'center', maxWidth: 440, lineHeight: 1.6 }}>
                     Expert troubleshooting for network configurations, system integrations, encoder diagnostics, and complex access control issues.
@@ -232,7 +232,7 @@ export default function Tier2ChatPage() {
               {messages.map((msg, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start', marginBottom: 12, animation: 'slideInUp 0.25s ease', alignItems: 'flex-end', gap: 8 }}>
                   {msg.role === 'assistant' && (
-                    <img src="/el-logo.png" alt="EL" style={{ width: 26, height: 26, borderRadius: 6, objectFit: 'contain', flexShrink: 0, background: '#fff', border: '1px solid rgba(15,23,42,0.06)' }} />
+                    <img src="/el-logo.png" alt="EL" style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'contain', flexShrink: 0, background: '#fff', border: '1px solid rgba(15,23,42,0.06)' }} />
                   )}
                   <div style={{
                     maxWidth: '75%', padding: '12px 16px', fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
@@ -251,7 +251,7 @@ export default function Tier2ChatPage() {
 
               {isLoading && (
                 <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 12, alignItems: 'flex-end', gap: 8 }}>
-                  <img src="/el-logo.png" alt="EL" style={{ width: 26, height: 26, borderRadius: 6, objectFit: 'contain', flexShrink: 0, background: '#fff', border: '1px solid rgba(15,23,42,0.06)' }} />
+                  <img src="/el-logo.png" alt="EL" style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'contain', flexShrink: 0, background: '#fff', border: '1px solid rgba(15,23,42,0.06)' }} />
                   <div style={{ padding: '12px 16px', borderRadius: '18px 18px 18px 4px', background: '#ffffff', border: '1px solid rgba(15,23,42,0.06)', display: 'flex', gap: 4, alignItems: 'center' }}>
                     {[0, 1, 2].map((dot) => (<span key={dot} style={{ width: 7, height: 7, borderRadius: '50%', background: '#94a3b8', animation: 'dotPulse 1.4s infinite ease-in-out', animationDelay: `${dot * 0.2}s` }} />))}
                   </div>
