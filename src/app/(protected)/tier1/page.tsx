@@ -76,13 +76,16 @@ export default function Tier1ChatPage() {
 
   const chatkit = useChatKit({
     api: {
-      getClientSecret: async () => {
+      getClientSecret: async (currentSecret: string | null) => {
         const user = getUserId();
         const conversation = getConversationId();
 
-        // Use cached secret if available
-        const cached = getCachedSecret();
-        if (cached) return cached;
+        // Only use cache on the initial fetch. When ChatKit passes a
+        // currentSecret, it's requesting a refresh — must mint a new one.
+        if (!currentSecret) {
+          const cached = getCachedSecret();
+          if (cached) return cached;
+        }
 
         const res = await fetch('/api/chatkit/session', {
           method: 'POST',
