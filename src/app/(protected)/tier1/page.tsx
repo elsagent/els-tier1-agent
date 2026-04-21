@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import { ChatKit, useChatKit } from '@openai/chatkit-react';
 
 // ─── Workflow ID (from env or hardcoded) ───
@@ -69,12 +68,12 @@ const RESPONSIVE_CSS = `
 `;
 
 export default function Tier1ChatPage() {
-  const router = useRouter();
   const [hoveredSidebar, setHoveredSidebar] = useState<number | null>(null);
   const [status, setStatus] = useState<'idle' | 'error'>('idle');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isReady, setIsReady] = useState(false);
 
-  const chatkit = useChatKit({
+  const { control, ref, setComposerValue, focusComposer } = useChatKit({
     api: {
       getClientSecret: async (currentSecret: string | null) => {
         const user = getUserId();
@@ -108,32 +107,35 @@ export default function Tier1ChatPage() {
       },
     },
     theme: { colorScheme: 'light' },
-    onReady: () => setStatus('idle'),
+    onReady: () => { setStatus('idle'); setIsReady(true); },
     onError: () => {
       resetConversation();
       setStatus('error');
     },
   });
 
-  const { control, ref } = chatkit as any;
-
   const startNewChat = useCallback(() => {
     resetConversation();
     window.location.reload();
   }, []);
 
-  const handleSidebarClick = useCallback((card: typeof SUGGESTION_CARDS[0]) => {
+  const handleSidebarClick = useCallback(async (card: typeof SUGGESTION_CARDS[0]) => {
     if (card.tier === 'tier2') {
-      router.push('/tier2');
+      window.open('https://els-tech.up.railway.app/tier2', '_blank', 'noopener,noreferrer');
       return;
     }
-    // For topic clicks, start a new chat with that topic
-    // ChatKit handles its own input, so we reload with a fresh conversation
-    if (card.message) {
-      resetConversation();
-      window.location.reload();
+    if (!card.message) return;
+    if (!isReady) {
+      console.warn('[ELS] ChatKit not ready yet, ignoring topic click');
+      return;
     }
-  }, [router]);
+    try {
+      await setComposerValue({ text: card.message });
+      focusComposer?.();
+    } catch (e) {
+      console.error('[ELS] setComposerValue failed', e);
+    }
+  }, [isReady, setComposerValue, focusComposer]);
 
   return (
     <>

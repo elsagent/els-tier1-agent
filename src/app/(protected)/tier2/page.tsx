@@ -143,15 +143,16 @@ export default function Tier2ChatPage() {
           display: 'grid',
           gridTemplateColumns: '280px 1fr',
           fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
-          background: 'linear-gradient(160deg, #f0f4ff 0%, #f8fafc 40%, #fef7f0 70%, #fdf2f4 100%)',
+          background: 'linear-gradient(160deg, #eef2ff 0%, #e0e7ff 35%, #f1f5f9 75%, #ede9fe 100%)',
         }}
       >
         {/* ─── Left Sidebar ─── */}
         <aside
           className="els-sidebar"
           style={{
-            background: 'linear-gradient(180deg, #ffffff 0%, #fafaf9 100%)',
-            borderRight: '1px solid rgba(176,18,44,0.06)',
+            background: 'linear-gradient(180deg, #1e1b4b 0%, #312e81 100%)',
+            borderRight: '1px solid rgba(67,56,202,0.3)',
+            color: '#e0e7ff',
             display: 'flex',
             flexDirection: 'column',
             height: '100vh',
@@ -161,11 +162,23 @@ export default function Tier2ChatPage() {
           {/* Brand */}
           <div style={{ padding: '20px 16px 16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <img src="/el-logo.png" alt="Electronic Locksmith" style={{ width: 60, height: 'auto', objectFit: 'contain', flexShrink: 0 }} />
+              <img src="/el-logo.png" alt="Electronic Locksmith" style={{ width: 60, height: 'auto', objectFit: 'contain', flexShrink: 0, filter: 'brightness(0) invert(1)' }} />
               <div>
-                <div style={{ fontWeight: 800, fontSize: 14, color: '#0f172a', lineHeight: 1.2 }}>Electronic Locksmith</div>
-                <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Technical Support</div>
+                <div style={{ fontWeight: 800, fontSize: 14, color: '#ffffff', lineHeight: 1.2 }}>Electronic Locksmith</div>
+                <div style={{ fontSize: 11, color: '#c7d2fe', marginTop: 2 }}>Advanced Tech Support</div>
               </div>
+            </div>
+            <div style={{
+              marginTop: 12, display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '4px 10px', borderRadius: 999,
+              background: 'linear-gradient(135deg, #4338ca 0%, #6d28d9 100%)',
+              fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: '#ffffff',
+              textTransform: 'uppercase', boxShadow: '0 2px 8px rgba(67,56,202,0.4)',
+            }}>
+              <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Tier 2 · Advanced
             </div>
           </div>
 
@@ -174,9 +187,9 @@ export default function Tier2ChatPage() {
             <button
               onClick={startNewChat}
               style={{
-                width: '100%', border: '1.5px solid rgba(15,23,42,0.08)', background: '#ffffff',
+                width: '100%', border: '1.5px solid rgba(199,210,254,0.2)', background: 'rgba(255,255,255,0.06)',
                 borderRadius: 10, padding: '10px 14px', fontSize: 13, fontWeight: 600,
-                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, color: '#334155',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, color: '#e0e7ff',
                 transition: 'all 0.15s ease',
               }}
             >
@@ -187,8 +200,8 @@ export default function Tier2ChatPage() {
             </button>
           </div>
 
-          <div style={{ height: 1, background: 'rgba(15,23,42,0.06)', margin: '0 12px 12px' }} />
-          <div style={{ padding: '0 16px 8px', fontSize: 11, fontWeight: 600, color: '#94a3b8', letterSpacing: '0.05em', textTransform: 'uppercase' }}>TOPICS</div>
+          <div style={{ height: 1, background: 'rgba(199,210,254,0.12)', margin: '0 12px 12px' }} />
+          <div style={{ padding: '0 16px 8px', fontSize: 11, fontWeight: 600, color: '#a5b4fc', letterSpacing: '0.05em', textTransform: 'uppercase' }}>TOPICS</div>
 
           {/* Sidebar topic items */}
           <div style={{ padding: '0 8px', display: 'flex', flexDirection: 'column', gap: 2, flex: 1 }}>
@@ -204,18 +217,18 @@ export default function Tier2ChatPage() {
                   style={{
                     display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
                     borderRadius: 10, border: 'none',
-                    background: isOther ? 'rgba(176,18,44,0.06)' : isHovered ? 'rgba(15,23,42,0.04)' : 'transparent',
+                    background: isOther ? 'rgba(139,92,246,0.18)' : isHovered ? 'rgba(255,255,255,0.06)' : 'transparent',
                     cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 0.15s ease',
                     fontWeight: isOther ? 600 : undefined,
                   }}
                 >
                   <span style={{ fontSize: 18, flexShrink: 0 }}>{card.emoji}</span>
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: isOther ? '#B0122C' : '#0f172a', lineHeight: 1.3 }}>{card.title}</div>
-                    <div style={{ fontSize: 11, color: '#94a3b8', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{card.description}</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: isOther ? '#c4b5fd' : '#e0e7ff', lineHeight: 1.3 }}>{card.title}</div>
+                    <div style={{ fontSize: 11, color: '#a5b4fc', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{card.description}</div>
                   </div>
                   {card.tier === 'tier1' && (
-                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#94a3b8" strokeWidth={2} style={{ marginLeft: 'auto', flexShrink: 0 }}>
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#a5b4fc" strokeWidth={2} style={{ marginLeft: 'auto', flexShrink: 0 }}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
                   )}
@@ -225,14 +238,14 @@ export default function Tier2ChatPage() {
           </div>
 
           {/* Online indicator */}
-          <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(15,23,42,0.06)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(199,210,254,0.12)', display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{
               width: 8, height: 8, borderRadius: '50%',
-              background: status === 'error' ? '#ef4444' : '#16a34a',
+              background: status === 'error' ? '#f87171' : '#34d399',
               animation: status === 'error' ? 'none' : 'onlinePulse 2s infinite',
             }} />
-            <span style={{ fontSize: 12, color: '#64748b' }}>
-              {status === 'error' ? 'Connection error' : 'Online 24/7'}
+            <span style={{ fontSize: 12, color: '#c7d2fe' }}>
+              {status === 'error' ? 'Connection error' : 'Specialist Online'}
             </span>
           </div>
         </aside>
@@ -244,10 +257,10 @@ export default function Tier2ChatPage() {
             className="els-mobile-header"
             style={{
               height: 56, minHeight: 56,
-              background: 'linear-gradient(135deg, #ffffff 0%, #f8f5ff 100%)',
-              borderBottom: '1px solid rgba(176,18,44,0.06)',
+              background: 'linear-gradient(135deg, #eef2ff 0%, #ede9fe 100%)',
+              borderBottom: '1px solid rgba(67,56,202,0.12)',
               display: 'flex', alignItems: 'center', padding: '0 16px',
-              boxShadow: '0 1px 8px rgba(176,18,44,0.04)', zIndex: 20,
+              boxShadow: '0 1px 8px rgba(67,56,202,0.06)', zIndex: 20,
             }}
           >
             <button
@@ -259,7 +272,7 @@ export default function Tier2ChatPage() {
               </svg>
             </button>
             <img src="/el-logo.png" alt="EL" style={{ width: 40, height: 'auto', marginRight: 8 }} />
-            <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>Technical Support</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#1e1b4b' }}>Tier 2 · Advanced Support</span>
             <div style={{ flex: 1 }} />
             <span style={{
               width: 8, height: 8, borderRadius: '50%',
@@ -273,30 +286,38 @@ export default function Tier2ChatPage() {
             <div
               style={{
                 background: '#ffffff',
-                border: '1px solid rgba(176,18,44,0.06)',
+                border: '1px solid rgba(67,56,202,0.12)',
                 borderRadius: 12,
                 height: '100%',
                 overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
-                boxShadow: '0 1px 2px rgba(15, 23, 42, 0.06)',
+                boxShadow: '0 4px 20px rgba(67,56,202,0.08)',
               }}
             >
               {/* Header bar */}
               <div
                 style={{
                   padding: '12px 16px',
-                  borderBottom: '1px solid rgba(176,18,44,0.06)',
+                  borderBottom: '1px solid rgba(67,56,202,0.12)',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 10,
-                  background: 'linear-gradient(135deg, #ffffff 0%, #f8f5ff 100%)',
+                  background: 'linear-gradient(135deg, #eef2ff 0%, #ede9fe 100%)',
                 }}
               >
                 <img src="/el-logo.png" alt="EL" style={{ width: 28, height: 28, objectFit: 'contain' }} />
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a' }}>Technical Support</div>
-                  <div style={{ fontSize: 11, color: '#94a3b8' }}>Advanced SALTO Troubleshooting</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: '#1e1b4b' }}>Advanced Tech Support</div>
+                  <div style={{ fontSize: 11, color: '#6366f1' }}>Tier 2 · Specialist SALTO Troubleshooting</div>
+                </div>
+                <div style={{
+                  padding: '4px 10px', borderRadius: 999,
+                  background: 'linear-gradient(135deg, #4338ca 0%, #6d28d9 100%)',
+                  fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: '#ffffff',
+                  textTransform: 'uppercase',
+                }}>
+                  Tier 2
                 </div>
               </div>
 
