@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "smoke": "node scripts/smoke-test.mjs",
+    "prestart": "node scripts/smoke-test.mjs",
+    "eval": "node scripts/eval.mjs"
   },
   "dependencies": {
     "@openai/chatkit-react": "^1.5.0",

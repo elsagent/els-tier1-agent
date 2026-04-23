@@ -1,35 +1,47 @@
 import { openai } from '../openai';
 import { TIER1_SYSTEM_PROMPT } from './prompts';
+import { normalizeChars } from './normalize';
+import { trialModeAppendix } from './trial_mode';
 
-const TIER1_WORKFLOW_ID = process.env.WORKFLOW_ID || process.env.TIER1_WORKFLOW_ID || '';
+const TIER1_WORKFLOW_ID = process.env.WORKFLOW_ID || process.env.TIER1_WORKFLOW_ID || process.env.TIER1_ASSISTANT_ID || '';
 const VECTOR_STORE_ID = process.env.OPENAI_VECTOR_STORE_ID || '';
-
-// Strip OpenAI file_search citation annotations like 【8:2†filename.pdf】
-function stripCitations(text: string): string {
-  return text.replace(/【[^】]*】/g, '');
-}
+const FALLBACK_MODEL = process.env.FALLBACK_MODEL || 'gpt-4o';
 
 /**
  * Process streamed events from the Responses API.
  * Handles text deltas, function calls (escalate_to_tier2, escalate_to_human),
  * and captures the response ID for conversation continuity.
  */
+// Match OpenAI file_search citation annotations like 【8:2†filename.pdf】
+// and extract the filename. These appear in the delta text before the
+// normalizer strips them.
+const CITATION_RE = /【[^】]*?†([^】]+)】/g;
+
 async function* processStream(
   stream: AsyncIterable<any>
 ): AsyncGenerator<string, void, unknown> {
   let responseId: string | null = null;
+  const sources = new Set<string>();
+  let usage: Record<string, unknown> | null = null;
+  let model: string | null = null;
 
   for await (const event of stream as any) {
     const eventType = event?.type || '';
 
     if (eventType === 'response.created') {
       responseId = event.response?.id || null;
+      model = event.response?.model || null;
     }
 
     if (eventType === 'response.output_text.delta') {
       const delta = event.delta || '';
       if (delta) {
-        const cleaned = stripCitations(delta);
+        // Extract citation filenames before the normalizer strips them.
+        for (const m of delta.matchAll(CITATION_RE)) {
+          const fn = (m[1] || '').trim();
+          if (fn) sources.add(fn);
+        }
+        const cleaned = normalizeChars(delta);
         if (cleaned) yield cleaned;
       }
     }
@@ -64,13 +76,23 @@ async function* processStream(
 
     if (eventType === 'response.completed') {
       responseId = event.response?.id || responseId;
+      const u = event.response?.usage;
+      if (u) {
+        usage = {
+          input_tokens: u.input_tokens ?? null,
+          output_tokens: u.output_tokens ?? null,
+          total_tokens: u.total_tokens ?? null,
+          cached_tokens: u.input_tokens_details?.cached_tokens ?? u.cached_tokens ?? null,
+          model,
+        };
+      }
     }
   }
 
-  // Yield the response ID so the caller can store it for conversation continuity
-  if (responseId) {
-    yield `[RESPONSE_ID:${responseId}]`;
-  }
+  // Emit structured metadata for the caller to persist.
+  for (const src of sources) yield `[SOURCE:${src}]`;
+  if (usage) yield `[USAGE:${JSON.stringify(usage)}]`;
+  if (responseId) yield `[RESPONSE_ID:${responseId}]`;
 }
 
 /**
@@ -105,14 +127,14 @@ export async function* runTier1(
       if (!msg.includes('model') && !msg.includes('not found') && !msg.includes('invalid')) {
         throw err; // Re-throw non-model errors
       }
-      console.warn('[Tier1] Workflow ID not yet callable via API, falling back to gpt-4o + file_search');
+      console.warn(`[Tier1] Workflow ID not yet callable via API, falling back to ${FALLBACK_MODEL} + file_search`);
     }
   }
 
   // --- Fallback: gpt-4o + system prompt + file_search (mirrors the workflow brain) ---
   const fallbackParams: Record<string, unknown> = {
-    model: 'gpt-4o',
-    instructions: TIER1_SYSTEM_PROMPT,
+    model: FALLBACK_MODEL,
+    instructions: TIER1_SYSTEM_PROMPT + trialModeAppendix(),
     input: userMessage,
     stream: true,
     tools: [

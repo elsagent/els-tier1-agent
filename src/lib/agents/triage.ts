@@ -1,7 +1,8 @@
 import { openai } from '../openai';
 import { TRIAGE_SYSTEM_PROMPT } from './prompts';
 
-const TRIAGE_WORKFLOW_ID = process.env.WORKFLOW_ID || process.env.TRIAGE_WORKFLOW_ID || '';
+const TRIAGE_WORKFLOW_ID = process.env.WORKFLOW_ID || process.env.TRIAGE_WORKFLOW_ID || process.env.TRIAGE_ASSISTANT_ID || '';
+const FALLBACK_MODEL = process.env.FALLBACK_MODEL || 'gpt-4o';
 
 export interface TriageResult {
   tier: 'tier1' | 'tier2' | 'escalate';
@@ -20,7 +21,7 @@ export async function runTriage(
 ): Promise<TriageResult> {
   try {
     const response = await (openai.responses as any).create({
-      model: TRIAGE_WORKFLOW_ID || 'gpt-4o',
+      model: TRIAGE_WORKFLOW_ID || FALLBACK_MODEL,
       instructions: TRIAGE_SYSTEM_PROMPT,
       input: userMessage,
       tools: [

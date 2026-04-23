@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    name: typecheck + build + leak scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      # Placeholder values that satisfy env-parsing without revealing real keys.
+      # If any of these leak into the client bundle, the grep step below catches it.
+      OPENAI_API_KEY: sk-placeholder-for-ci
+      OPENAI_VECTOR_STORE_ID: vs_placeholder
+      TRIAGE_ASSISTANT_ID: asst_placeholder
+      TIER1_ASSISTANT_ID: asst_placeholder
+      TIER2_ASSISTANT_ID: asst_placeholder
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+      SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key-THIS_MUST_NOT_LEAK
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci --ignore-scripts
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Build
+        run: npx next build
+
+      - name: Bundle leak scan
+        # Fail the build if any known secret pattern shows up in the client bundle.
+        run: |
+          set -e
+          echo "Scanning .next/static and .next/server/app for leaked secrets..."
+
+          LEAK_PATTERNS=(
+            "SUPABASE_SERVICE_ROLE_KEY"
+            "service-role-key-THIS_MUST_NOT_LEAK"
+            "sk-proj-[A-Za-z0-9_-]{20,}"
+            "sk-ant-[A-Za-z0-9_-]{20,}"
+            '"service_role"'
+          )
+
+          HITS=0
+          for pattern in "${LEAK_PATTERNS[@]}"; do
+            if grep -r -l -E "$pattern" .next/static .next/server/app 2>/dev/null; then
+              echo "::error::Leak pattern matched in client bundle: $pattern"
+              HITS=$((HITS + 1))
+            fi
+          done
+
+          if [ "$HITS" -gt 0 ]; then
+            echo "::error::Bundle leak scan found $HITS leaked patterns. Failing the build."
+            exit 1
+          fi
+          echo "OK - no leak patterns found."

@@ -1,178 +1,254 @@
-import OpenAI from 'openai';
-import { readFileSync, readdirSync, existsSync } from 'fs';
-import { join } from 'path';
+#!/usr/bin/env node
+/**
+ * ELS OpenAI Assistant provisioning — single source of truth.
+ *
+ * Reads the same persona docs + APP_RULES + qa_pairs that the Next.js
+ * runtime reads, assembles tier-specific prompts, and creates/updates the
+ * three Assistants (Triage, Tier 1, Tier 2) on the live OpenAI org.
+ *
+ * Usage:
+ *   # First-time setup (no IDs in env):
+ *   OPENAI_API_KEY=sk-... node scripts/setup-assistants.mjs
+ *
+ *   # Update existing assistants (IDs read from env):
+ *   OPENAI_API_KEY=sk-... TRIAGE_WORKFLOW_ID=asst_... \
+ *     TIER1_WORKFLOW_ID=asst_... TIER2_WORKFLOW_ID=asst_... \
+ *     node scripts/setup-assistants.mjs
+ *
+ *   # Force-create even when IDs exist (rare — only for re-provisioning):
+ *   ELS_FORCE_CREATE=1 node scripts/setup-assistants.mjs
+ *
+ * Reads API key from:
+ *   1. OPENAI_API_KEY env var (preferred, CI/prod)
+ *   2. .env.local file next to package.json (dev convenience)
+ *
+ * NEVER edit Assistant prompts in the OpenAI dashboard. That dashboard is
+ * the live state; this script is the source of truth. Edit kb/APP_RULES.md
+ * or kb/persona/*.md and re-run this script.
+ */
 
-const apiKey = process.env.OPENAI_API_KEY;
-if (!apiKey) {
-  console.error('Set OPENAI_API_KEY env var');
+import OpenAI from 'openai';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(__dirname, '..');
+const KB = path.join(ROOT, 'kb');
+
+// ─── API key resolution ────────────────────────────────────────────────────
+
+function resolveApiKey() {
+  if (process.env.OPENAI_API_KEY) return process.env.OPENAI_API_KEY.trim();
+  try {
+    const envPath = path.join(ROOT, '.env.local');
+    const envContent = fs.readFileSync(envPath, 'utf8');
+    const match = envContent.match(/^OPENAI_API_KEY=(.+)$/m);
+    if (match) return match[1].trim();
+  } catch {}
+  console.error('Set OPENAI_API_KEY env var or add it to els-tier1-agent/.env.local');
   process.exit(1);
 }
 
-const openai = new OpenAI({ apiKey });
+const openai = new OpenAI({ apiKey: resolveApiKey() });
 
-const TRIAGE_SYSTEM_PROMPT = `You are SALTO Support Triage — a friendly first point of contact for SALTO electronic lock support.
+// ─── Prompt assembly (mirrors src/lib/agents/prompts.ts) ──────────────────
 
-Your job:
-1. Greet the user warmly.
-2. Ask what SALTO product they need help with and what problem they're experiencing.
-3. Based on their response, call the classify_issue function.
-
-You MUST always call classify_issue. Never try to resolve the issue yourself.
-
-Top 10 Tier 1 categories (these can be resolved by the AI agent):
-- battery_replacement: Low battery warnings, replacing lock batteries
-- door_not_locking: Door won't lock or latch properly
-- keycard_not_working: Keycard not recognized, access denied
-- software_password_reset: Forgotten SALTO software password
-- lock_offline: Lock showing offline in management software
-- guest_card_programming: Creating or programming guest keycards
-- clock_sync: Lock clock out of sync with server
-- firmware_update: How to update lock firmware
-- audit_trail: Viewing or exporting lock access history
-- basic_software_navigation: General SALTO software how-to questions
-
-If the issue does NOT match any of the above categories, set tier to "escalate".
-If you're unsure, set tier to "escalate" and confidence below 0.7.`;
-
-const TIER1_SYSTEM_PROMPT = `You are SALTO Tier 1 Support Agent. You help non-technical hotel staff (night auditors, front desk operators) resolve common electronic lock issues.
-
-CRITICAL RULES:
-- Use PLAIN, SIMPLE language. Never use technical jargon.
-- Give ONE step at a time. Wait for the user to confirm before continuing.
-- After each step ask: "Did that work?" or "What do you see now?"
-- Always search the knowledge base first using file_search before answering.
-- If the knowledge base has no answer, call escalate_to_human immediately.
-- If you've tried all steps and the issue persists, call escalate_to_human.
-- NEVER guess or make up steps. If unsure, escalate.
-- Be patient, encouraging, and supportive.
-- Do NOT discuss topics outside SALTO lock support.
-
-Example of good language:
-- "Press the small button on the bottom of the lock" (NOT "actuate the manual override mechanism")
-- "Open the SALTO program on your computer" (NOT "launch the ProAccess SPACE client application")`;
-
-async function main() {
-  console.log('Creating vector store for Tier 1 KB...');
-  const vectorStore = await openai.vectorStores.create({
-    name: 'ELS Tier 1 Knowledge Base',
-  });
-  console.log(`Vector store created: ${vectorStore.id}`);
-
-  // Upload KB files if any exist
-  const kbDir = join(process.cwd(), 'kb');
-  if (existsSync(kbDir)) {
-    const files = readdirSync(kbDir).filter(f => f.endsWith('.txt') || f.endsWith('.md') || f.endsWith('.pdf'));
-    for (const file of files) {
-      console.log(`Uploading KB file: ${file}`);
-      const uploaded = await openai.files.create({
-        file: new File([readFileSync(join(kbDir, file))], file),
-        purpose: 'assistants',
-      });
-      await openai.vectorStores.files.create(vectorStore.id, {
-        file_id: uploaded.id,
-      });
-      console.log(`  Uploaded: ${uploaded.id}`);
-    }
-  }
-
-  console.log('\nCreating Triage Assistant...');
-  const triageAssistant = await openai.beta.assistants.create({
-    name: 'ELS Triage Agent',
-    instructions: TRIAGE_SYSTEM_PROMPT,
-    model: 'gpt-4o',
-    tools: [
-      {
-        type: 'function',
-        function: {
-          name: 'classify_issue',
-          description: 'Classify the customer issue into a support tier and category',
-          parameters: {
-            type: 'object',
-            properties: {
-              tier: {
-                type: 'string',
-                enum: ['tier1', 'escalate'],
-                description: 'Which tier should handle this issue',
-              },
-              category: {
-                type: 'string',
-                enum: [
-                  'battery_replacement',
-                  'door_not_locking',
-                  'keycard_not_working',
-                  'software_password_reset',
-                  'lock_offline',
-                  'guest_card_programming',
-                  'clock_sync',
-                  'firmware_update',
-                  'audit_trail',
-                  'basic_software_navigation',
-                  'unknown',
-                ],
-                description: 'The specific issue category',
-              },
-              confidence: {
-                type: 'number',
-                description: 'Confidence score from 0 to 1',
-              },
-              summary: {
-                type: 'string',
-                description: 'Brief summary of the customer issue',
-              },
-            },
-            required: ['tier', 'category', 'confidence', 'summary'],
-          },
-        },
-      },
-    ],
-  });
-  console.log(`Triage Assistant created: ${triageAssistant.id}`);
-
-  console.log('\nCreating Tier 1 Assistant...');
-  const tier1Assistant = await openai.beta.assistants.create({
-    name: 'ELS Tier 1 Support Agent',
-    instructions: TIER1_SYSTEM_PROMPT,
-    model: 'gpt-4o',
-    tools: [
-      { type: 'file_search' },
-      {
-        type: 'function',
-        function: {
-          name: 'escalate_to_human',
-          description: 'Escalate the issue to a human Tier 3 technician when the AI cannot resolve it',
-          parameters: {
-            type: 'object',
-            properties: {
-              summary: {
-                type: 'string',
-                description: 'Summary of what was tried and why escalation is needed',
-              },
-              reason: {
-                type: 'string',
-                enum: ['out_of_scope', 'all_steps_failed', 'uncertain', 'customer_request'],
-                description: 'Reason for escalation',
-              },
-            },
-            required: ['summary', 'reason'],
-          },
-        },
-      },
-    ],
-    tool_resources: {
-      file_search: {
-        vector_store_ids: [vectorStore.id],
-      },
-    },
-  });
-  console.log(`Tier 1 Assistant created: ${tier1Assistant.id}`);
-
-  console.log('\n========================================');
-  console.log('Setup complete! Add these to your .env.local:');
-  console.log('========================================');
-  console.log(`TRIAGE_ASSISTANT_ID=${triageAssistant.id}`);
-  console.log(`TIER1_ASSISTANT_ID=${tier1Assistant.id}`);
-  console.log(`VECTOR_STORE_ID=${vectorStore.id}`);
-  console.log('========================================');
+function readIfExists(p) {
+  try { return fs.readFileSync(p, 'utf8'); } catch { return ''; }
 }
 
-main().catch(console.error);
+const IDENTITY = readIfExists(path.join(KB, 'persona', '01_identity.md'));
+const BOUNDARIES = readIfExists(path.join(KB, 'persona', '02_boundaries.md'));
+const VOICE = readIfExists(path.join(KB, 'persona', '03_voice.md'));
+const LINGUISTIC = readIfExists(path.join(KB, 'persona', '04_linguistic.md'));
+const APP_RULES = readIfExists(path.join(KB, 'APP_RULES.md'));
+
+function readQaPairs() {
+  const dir = path.join(KB, 'qa_pairs');
+  if (!fs.existsSync(dir)) return '';
+  const files = fs.readdirSync(dir).filter((f) => f.endsWith('.md') && f !== 'README.md').sort();
+  if (!files.length) return '';
+  return files
+    .map((f) => `### Example (${f.replace(/\.md$/, '')})\n${readIfExists(path.join(dir, f))}`)
+    .join('\n\n');
+}
+
+const FEW_SHOT = readQaPairs();
+
+const BASE_SECTIONS = [IDENTITY, BOUNDARIES, VOICE, LINGUISTIC, APP_RULES, FEW_SHOT ? `# Examples\n\n${FEW_SHOT}` : ''];
+
+function assemble(tierSection) {
+  return [...BASE_SECTIONS, tierSection].filter(Boolean).join('\n\n---\n\n').trim();
+}
+
+const TRIAGE_SECTION = `# Triage role
+
+Greet the user warmly. Ask what SALTO product they're having trouble with and what's happening. Then classify the issue by calling the classify_issue function. Never attempt to resolve the issue yourself.
+
+Tier 1 categories: battery_replacement, door_not_locking, keycard_not_working, software_password_reset, lock_offline, guest_card_programming, clock_sync, firmware_update, audit_trail, basic_software_navigation.
+
+Tier 2 categories: advanced_lock_configuration, network_troubleshooting, encoder_diagnostics, access_plan_configuration, database_connectivity, pms_integration, user_management_advanced, system_backup_recovery, multi_site_configuration, hardware_compatibility.
+
+If it matches a Tier 1 category, tier = "tier1". Tier 2 category, tier = "tier2". Otherwise or if it needs on-site physical repair, tier = "escalate".`;
+
+const TIER1_SECTION = `# Tier 1 role
+
+You handle the Tier 1 categories listed in Boundaries. Use file_search silently to find resolution steps (never reveal searches or cite sources).
+
+Tools:
+- escalate_to_tier2 — when the issue requires deeper troubleshooting beyond Tier 1
+- escalate_to_human — when the issue cannot be resolved, or when the safety layer has flagged an emergency
+
+Give one step at a time. After each step, check in naturally.`;
+
+const TIER2_SECTION = `# Tier 2 role
+
+You handle the Tier 2 categories listed in Boundaries. Use file_search silently to find resolution steps (never reveal searches or cite sources).
+
+Tools:
+- escalate_to_human — when the knowledge base doesn't cover the issue, when you've exhausted the known resolution steps, or when the safety layer has flagged an emergency
+
+If a step could cause data loss or lock people out, say so clearly first. Break complex procedures into steps and check in at critical points.
+
+If the user has already tried basic troubleshooting (they usually have by the time they reach Tier 2), skip ahead to the more advanced steps.`;
+
+// ─── Tool definitions ─────────────────────────────────────────────────────
+
+const TRIAGE_TOOLS = [
+  {
+    type: 'function',
+    function: {
+      name: 'classify_issue',
+      description: 'Classify the customer issue into a support tier and category.',
+      parameters: {
+        type: 'object',
+        properties: {
+          tier: { type: 'string', enum: ['tier1', 'tier2', 'escalate'] },
+          category: { type: 'string' },
+          confidence: { type: 'number' },
+          summary: { type: 'string' },
+        },
+        required: ['tier', 'category', 'confidence', 'summary'],
+      },
+    },
+  },
+];
+
+const TIER1_TOOLS = [
+  { type: 'file_search' },
+  {
+    type: 'function',
+    function: {
+      name: 'escalate_to_tier2',
+      description: 'Escalate to Tier 2 advanced support when the issue requires deeper technical troubleshooting.',
+      parameters: {
+        type: 'object',
+        properties: {
+          summary: { type: 'string', description: 'Brief summary of the issue and what was already tried' },
+          reason: { type: 'string', description: 'Why this needs Tier 2' },
+        },
+        required: ['summary'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'escalate_to_human',
+      description: 'Escalate to a human support agent when the issue cannot be resolved through automated support.',
+      parameters: {
+        type: 'object',
+        properties: {
+          summary: { type: 'string' },
+          reason: { type: 'string' },
+        },
+        required: ['summary'],
+      },
+    },
+  },
+];
+
+const TIER2_TOOLS = [
+  { type: 'file_search' },
+  {
+    type: 'function',
+    function: {
+      name: 'escalate_to_human',
+      description: 'Escalate to a human support agent when the issue cannot be resolved through automated support.',
+      parameters: {
+        type: 'object',
+        properties: {
+          summary: { type: 'string' },
+          reason: { type: 'string' },
+        },
+        required: ['summary'],
+      },
+    },
+  },
+];
+
+// ─── Main ──────────────────────────────────────────────────────────────────
+
+async function upsert(kind, existingId, params) {
+  const force = process.env.ELS_FORCE_CREATE === '1';
+  if (existingId && !force) {
+    console.log(`[${kind}] updating ${existingId} …`);
+    const updated = await openai.beta.assistants.update(existingId, params);
+    console.log(`[${kind}] updated: ${updated.id}`);
+    return updated.id;
+  }
+  console.log(`[${kind}] creating new assistant …`);
+  const created = await openai.beta.assistants.create({
+    name: params.name,
+    ...params,
+  });
+  console.log(`[${kind}] created: ${created.id}`);
+  return created.id;
+}
+
+async function main() {
+  if (!APP_RULES) throw new Error('kb/APP_RULES.md is empty or missing — aborting');
+  if (!IDENTITY) throw new Error('kb/persona/01_identity.md missing — aborting');
+
+  const vectorStoreId = process.env.OPENAI_VECTOR_STORE_ID || 'vs_695e9b3d06c481919e8733f807588df3';
+  console.log(`Using vector store: ${vectorStoreId}`);
+
+  const triageParams = {
+    name: 'ELS Triage Agent',
+    instructions: assemble(TRIAGE_SECTION),
+    model: 'gpt-4o',
+    tools: TRIAGE_TOOLS,
+  };
+  const tier1Params = {
+    name: 'ELS Tier 1 Support Agent',
+    instructions: assemble(TIER1_SECTION),
+    model: 'gpt-4o',
+    tools: TIER1_TOOLS,
+    tool_resources: { file_search: { vector_store_ids: [vectorStoreId] } },
+  };
+  const tier2Params = {
+    name: 'ELS Tier 2 Support Agent',
+    instructions: assemble(TIER2_SECTION),
+    model: 'gpt-4o',
+    tools: TIER2_TOOLS,
+    tool_resources: { file_search: { vector_store_ids: [vectorStoreId] } },
+  };
+
+  const triageId = await upsert('triage', process.env.TRIAGE_WORKFLOW_ID, triageParams);
+  const tier1Id = await upsert('tier1', process.env.TIER1_WORKFLOW_ID, tier1Params);
+  const tier2Id = await upsert('tier2', process.env.TIER2_WORKFLOW_ID, tier2Params);
+
+  console.log('\n========================================');
+  console.log('Setup complete. Ensure these are set in each service\'s env:');
+  console.log('========================================');
+  console.log(`TRIAGE_WORKFLOW_ID=${triageId}`);
+  console.log(`TIER1_WORKFLOW_ID=${tier1Id}`);
+  console.log(`TIER2_WORKFLOW_ID=${tier2Id}`);
+  console.log(`OPENAI_VECTOR_STORE_ID=${vectorStoreId}`);
+  console.log('========================================');
+  console.log('\nNext: run the eval to confirm behavior matches expectations:');
+  console.log('  npm run eval');
+}
+
+main().catch((err) => { console.error(err); process.exit(1); });

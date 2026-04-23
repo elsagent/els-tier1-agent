@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server';
 import { runTier1 } from '@/lib/agents/tier1';
 import { runTier2 } from '@/lib/agents/tier2';
+import { classify, cannedResponseFor, type SafetyClass } from '@/lib/agents/classifier';
+import { checkRate } from '@/lib/rate_limit';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
@@ -39,6 +41,28 @@ export async function POST(request: Request) {
       return new Response(
         JSON.stringify({ error: 'Valid tier (tier1 or tier2) is required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Rate limit per user. Uses Upstash if configured, in-memory fallback otherwise.
+    const rl = await checkRate(userId);
+    if (!rl.allowed) {
+      return new Response(
+        JSON.stringify({
+          error: `rate limit exceeded (${rl.scope})`,
+          limit: rl.limit,
+          reset: rl.reset,
+        }),
+        {
+          status: 429,
+          headers: {
+            'Content-Type': 'application/json',
+            'Retry-After': String(Math.max(1, rl.reset - Math.floor(Date.now() / 1000))),
+            'X-RateLimit-Limit': String(rl.limit),
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': String(rl.reset),
+          },
+        }
       );
     }
 
@@ -108,12 +132,25 @@ export async function POST(request: Request) {
       convId = newConv.id;
     }
 
-    // Save the user message
-    await supabase.from('messages').insert({
+    // Safety + scope classification (pre-filter). Fails open to 'ok'.
+    const safetyClass: SafetyClass = await classify(message);
+
+    // Save the user message (with classification if the column exists).
+    // Attempt with safety_class first; if the column doesn't exist yet,
+    // retry without it so the pipeline still works before the migration lands.
+    const userInsert = await supabase.from('messages').insert({
       conversation_id: convId,
       role: 'user',
       content: message,
+      safety_class: safetyClass,
     });
+    if (userInsert.error && /safety_class/i.test(userInsert.error.message)) {
+      await supabase.from('messages').insert({
+        conversation_id: convId,
+        role: 'user',
+        content: message,
+      });
+    }
 
     await supabase
       .from('conversations')
@@ -131,12 +168,50 @@ export async function POST(request: Request) {
         };
 
         try {
-          send({ type: 'meta', conversationId: convId });
+          send({ type: 'meta', conversationId: convId, safetyClass });
 
           let fullAssistantMessage = '';
           let isEscalated = false;
           let isEscalatedToTier2 = false;
           let latestResponseId: string | null = previousResponseId;
+          const retrievedSources = new Set<string>();
+          let tokenUsage: Record<string, unknown> | null = null;
+
+          // Short-circuit on non-ok classifications. Emergencies also escalate
+          // the conversation to a human so the support team follows up.
+          if (safetyClass !== 'ok') {
+            const canned = cannedResponseFor(safetyClass) || '';
+            fullAssistantMessage = canned;
+
+            if (safetyClass === 'emergency') {
+              isEscalated = true;
+              await supabase
+                .from('conversations')
+                .update({ status: 'escalated', tier: 'escalate' })
+                .eq('id', convId);
+              send({ type: 'escalate', content: canned, summary: canned, safetyClass });
+            } else {
+              send({ type: 'text', content: canned, safetyClass });
+            }
+
+            const assistantInsert = await supabase.from('messages').insert({
+              conversation_id: convId,
+              role: 'assistant',
+              content: canned,
+              safety_class: safetyClass,
+            });
+            if (assistantInsert.error && /safety_class/i.test(assistantInsert.error.message)) {
+              await supabase.from('messages').insert({
+                conversation_id: convId,
+                role: 'assistant',
+                content: canned,
+              });
+            }
+
+            send({ type: 'done', conversationId: convId });
+            controller.close();
+            return;
+          }
 
           // Determine which agent to run based on current tier
           const agentRunner = currentTier === 'tier2' ? runTier2 : runTier1;
@@ -151,6 +226,22 @@ export async function POST(request: Request) {
                 .from('conversations')
                 .update({ thread_id: rid })
                 .eq('id', convId);
+              continue;
+            }
+
+            // Capture cited source filenames from file_search annotations
+            if (chunk.startsWith('[SOURCE:')) {
+              retrievedSources.add(chunk.slice('[SOURCE:'.length, -1));
+              continue;
+            }
+
+            // Capture OpenAI usage payload (input/output/cached tokens, model)
+            if (chunk.startsWith('[USAGE:')) {
+              try {
+                tokenUsage = JSON.parse(chunk.slice('[USAGE:'.length, -1));
+              } catch {
+                // keep tokenUsage null — persistence will fall back gracefully
+              }
               continue;
             }
 
@@ -190,6 +281,18 @@ export async function POST(request: Request) {
                       .from('conversations')
                       .update({ thread_id: rid })
                       .eq('id', convId);
+                    continue;
+                  }
+
+                  if (t2chunk.startsWith('[SOURCE:')) {
+                    retrievedSources.add(t2chunk.slice('[SOURCE:'.length, -1));
+                    continue;
+                  }
+
+                  if (t2chunk.startsWith('[USAGE:')) {
+                    try {
+                      tokenUsage = JSON.parse(t2chunk.slice('[USAGE:'.length, -1));
+                    } catch {}
                     continue;
                   }
 
@@ -239,13 +342,29 @@ export async function POST(request: Request) {
             }
           }
 
-          // Save assistant message
+          // Save assistant message with per-turn metadata. Degrades gracefully
+          // if the 20260422_add_turn_metadata migration hasn't been applied yet.
           if (fullAssistantMessage) {
-            await supabase.from('messages').insert({
+            const sourcesArr = retrievedSources.size ? Array.from(retrievedSources) : null;
+            const fullPayload = {
               conversation_id: convId,
-              role: 'assistant',
+              role: 'assistant' as const,
               content: fullAssistantMessage,
-            });
+              safety_class: 'ok',
+              retrieved_sources: sourcesArr,
+              token_usage: tokenUsage,
+              response_id: latestResponseId,
+            };
+            const r = await supabase.from('messages').insert(fullPayload);
+            if (r.error && /(retrieved_sources|token_usage|response_id|safety_class)/i.test(r.error.message)) {
+              // Retry without the columns that don't exist yet
+              await supabase.from('messages').insert({
+                conversation_id: convId,
+                role: 'assistant',
+                content: fullAssistantMessage,
+              });
+              console.warn('[chat] persisted assistant message without turn metadata — apply migration 20260422_add_turn_metadata');
+            }
           }
 
           send({ type: 'done', conversationId: convId });
