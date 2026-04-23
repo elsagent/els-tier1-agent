@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
-  // No auth — all routes are public
+  // No auth — all routes are public (customer-facing tier1/tier2 only)
   return NextResponse.next({ request });
 }
 

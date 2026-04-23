@@ -54,16 +54,19 @@ const SUGGESTION_CARDS = [
 ];
 
 const RESPONSIVE_CSS = `
-@keyframes onlinePulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
 @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+@keyframes slideInLeft { from{transform:translateX(-100%)} to{transform:translateX(0)} }
 
 @media (max-width: 768px) {
   .els-layout { grid-template-columns: 1fr !important; }
-  .els-sidebar { display: none !important; }
+  .els-sidebar-desktop { display: none !important; }
   .els-mobile-header { display: flex !important; }
+  .els-chat-panel { padding: 8px !important; }
 }
 @media (min-width: 769px) {
   .els-mobile-header { display: none !important; }
+  .els-sidebar-drawer { display: none !important; }
+  .els-drawer-overlay { display: none !important; }
 }
 `;
 
@@ -121,7 +124,7 @@ export default function Tier1ChatPage() {
 
   const handleSidebarClick = useCallback(async (card: typeof SUGGESTION_CARDS[0]) => {
     if (card.tier === 'tier2') {
-      window.open('https://els-tech.up.railway.app/tier2', '_blank', 'noopener,noreferrer');
+      window.location.href = '/tier2';
       return;
     }
     if (!card.message) return;
@@ -137,31 +140,9 @@ export default function Tier1ChatPage() {
     }
   }, [isReady, setComposerValue, focusComposer]);
 
-  return (
+  // Shared sidebar content — rendered in desktop column AND mobile drawer
+  const sidebarContent = (
     <>
-      <style>{RESPONSIVE_CSS}</style>
-      <div
-        className="els-layout"
-        style={{
-          height: '100vh',
-          display: 'grid',
-          gridTemplateColumns: '280px 1fr',
-          fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
-          background: 'linear-gradient(160deg, #fdf2f4 0%, #fef7f0 30%, #f8fafc 70%, #f0f4ff 100%)',
-        }}
-      >
-        {/* ─── Left Sidebar ─── */}
-        <aside
-          className="els-sidebar"
-          style={{
-            background: 'linear-gradient(180deg, #ffffff 0%, #fafaf9 100%)',
-            borderRight: '1px solid rgba(176,18,44,0.06)',
-            display: 'flex',
-            flexDirection: 'column',
-            height: '100vh',
-            overflowY: 'auto',
-          }}
-        >
           {/* Brand */}
           <div style={{ padding: '20px 16px 16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -212,17 +193,17 @@ export default function Tier1ChatPage() {
                   style={{
                     display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
                     borderRadius: 10, border: 'none',
-                    background: isHovered ? (isOther ? 'rgba(176,18,44,0.08)' : 'rgba(15,23,42,0.04)') : 'transparent',
+                    background: isHovered ? (isOther ? 'rgba(200,16,46,0.08)' : 'rgba(15,23,42,0.04)') : 'transparent',
                     cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 0.15s ease',
                   }}
                 >
                   <span style={{ fontSize: 18, flexShrink: 0 }}>{card.emoji}</span>
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: isOther ? '#B0122C' : '#0f172a', lineHeight: 1.3 }}>{card.title}</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: isOther ? '#C8102E' : '#0f172a', lineHeight: 1.3 }}>{card.title}</div>
                     <div style={{ fontSize: 11, color: '#94a3b8', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{card.description}</div>
                   </div>
                   {isOther && (
-                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#B0122C" strokeWidth={2} style={{ marginLeft: 'auto', flexShrink: 0 }}>
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#C8102E" strokeWidth={2} style={{ marginLeft: 'auto', flexShrink: 0 }}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
                   )}
@@ -231,17 +212,73 @@ export default function Tier1ChatPage() {
             })}
           </div>
 
-          {/* Online indicator */}
-          <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(15,23,42,0.06)', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{
-              width: 8, height: 8, borderRadius: '50%',
-              background: status === 'error' ? '#ef4444' : '#16a34a',
-              animation: status === 'error' ? 'none' : 'onlinePulse 2s infinite',
-            }} />
-            <span style={{ fontSize: 12, color: '#64748b' }}>
-              {status === 'error' ? 'Connection error' : 'Online 24/7'}
-            </span>
-          </div>
+          {/* Connection status — minimal indicator, no misleading "24/7" claim */}
+          {status === 'error' && (
+            <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(15,23,42,0.06)', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444' }} />
+              <span style={{ fontSize: 12, color: '#64748b' }}>Connection error</span>
+            </div>
+          )}
+    </>
+  );
+
+  const sidebarStyle: React.CSSProperties = {
+    background: 'linear-gradient(180deg, #ffffff 0%, #fafaf9 100%)',
+    borderRight: '1px solid rgba(200,16,46,0.06)',
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100vh',
+    overflowY: 'auto',
+  };
+
+  return (
+    <>
+      <style>{RESPONSIVE_CSS}</style>
+      <div
+        className="els-layout"
+        style={{
+          height: '100vh',
+          display: 'grid',
+          gridTemplateColumns: '280px 1fr',
+          fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+          background: 'linear-gradient(160deg, #fdf2f4 0%, #fef7f0 30%, #f8fafc 70%, #f0f4ff 100%)',
+        }}
+      >
+        {/* ─── Left Sidebar (desktop) ─── */}
+        <aside className="els-sidebar-desktop" style={sidebarStyle}>
+          {sidebarContent}
+        </aside>
+
+        {/* ─── Mobile drawer overlay ─── */}
+        {sidebarOpen && (
+          <div
+            className="els-drawer-overlay"
+            onClick={() => setSidebarOpen(false)}
+            style={{
+              position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.4)', zIndex: 40,
+            }}
+          />
+        )}
+        {/* ─── Mobile drawer ─── */}
+        <aside
+          className="els-sidebar-drawer"
+          style={{
+            ...sidebarStyle,
+            position: 'fixed',
+            top: 0, left: 0, bottom: 0,
+            width: 280,
+            zIndex: 41,
+            transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
+            transition: 'transform 0.2s ease',
+            boxShadow: sidebarOpen ? '0 10px 30px rgba(0,0,0,0.18)' : 'none',
+          }}
+          onClick={(e) => {
+            // close drawer when a topic button is clicked inside
+            const target = e.target as HTMLElement;
+            if (target.closest('button')) setSidebarOpen(false);
+          }}
+        >
+          {sidebarContent}
         </aside>
 
         {/* ─── Main Chat Area (ChatKit) ─── */}
@@ -252,9 +289,9 @@ export default function Tier1ChatPage() {
             style={{
               height: 56, minHeight: 56,
               background: 'linear-gradient(135deg, #ffffff 0%, #fff8f8 100%)',
-              borderBottom: '1px solid rgba(176,18,44,0.06)',
+              borderBottom: '1px solid rgba(200,16,46,0.06)',
               display: 'flex', alignItems: 'center', padding: '0 16px',
-              boxShadow: '0 1px 8px rgba(176,18,44,0.04)', zIndex: 20,
+              boxShadow: '0 1px 8px rgba(200,16,46,0.04)', zIndex: 20,
             }}
           >
             <button
@@ -268,11 +305,9 @@ export default function Tier1ChatPage() {
             <img src="/el-logo.png" alt="EL" style={{ width: 40, height: 'auto', marginRight: 8 }} />
             <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>Quick Support</span>
             <div style={{ flex: 1 }} />
-            <span style={{
-              width: 8, height: 8, borderRadius: '50%',
-              background: status === 'error' ? '#ef4444' : '#16a34a',
-              animation: status === 'error' ? 'none' : 'onlinePulse 2s infinite',
-            }} />
+            {status === 'error' && (
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444' }} />
+            )}
           </header>
 
           {/* ChatKit widget container */}
@@ -280,7 +315,7 @@ export default function Tier1ChatPage() {
             <div
               style={{
                 background: '#ffffff',
-                border: '1px solid rgba(176,18,44,0.06)',
+                border: '1px solid rgba(200,16,46,0.06)',
                 borderRadius: 12,
                 height: '100%',
                 overflow: 'hidden',
@@ -293,7 +328,7 @@ export default function Tier1ChatPage() {
               <div
                 style={{
                   padding: '12px 16px',
-                  borderBottom: '1px solid rgba(176,18,44,0.06)',
+                  borderBottom: '1px solid rgba(200,16,46,0.06)',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 10,

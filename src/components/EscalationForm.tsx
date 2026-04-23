@@ -64,13 +64,13 @@ export default function EscalationForm({
     width: '100%',
     padding: '10px 14px',
     fontSize: 13,
-    border: focusedField === field ? '1.5px solid #B0122C' : '1px solid rgba(15,23,42,0.08)',
+    border: focusedField === field ? '1.5px solid #C8102E' : '1px solid rgba(15,23,42,0.08)',
     borderRadius: 10,
     outline: 'none',
     color: '#0f172a',
     background: '#ffffff',
     transition: 'all 0.15s ease',
-    boxShadow: focusedField === field ? '0 0 0 3px rgba(176,18,44,0.08)' : 'none',
+    boxShadow: focusedField === field ? '0 0 0 3px rgba(200,16,46,0.08)' : 'none',
     fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
   });
 
@@ -134,12 +134,12 @@ export default function EscalationForm({
     <div
       style={{
         borderRadius: 14,
-        border: '1px solid rgba(176,18,44,0.15)',
+        border: '1px solid rgba(200,16,46,0.15)',
         background: 'linear-gradient(135deg, #fff5f5 0%, #ffffff 100%)',
         padding: 24,
         marginBottom: 14,
         animation: 'escalationSlideIn 0.3s ease',
-        boxShadow: '0 4px 16px rgba(176,18,44,0.06)',
+        boxShadow: '0 4px 16px rgba(200,16,46,0.06)',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
@@ -148,7 +148,7 @@ export default function EscalationForm({
             width: 32,
             height: 32,
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, #B0122C 0%, #D4365C 100%)',
+            background: 'linear-gradient(135deg, #C8102E 0%, #D4365C 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -171,7 +171,7 @@ export default function EscalationForm({
       <form onSubmit={handleSubmit} style={{ marginTop: 16 }}>
         <div style={{ marginBottom: 12 }}>
           <label style={labelStyle}>
-            Name <span style={{ color: '#B0122C' }}>*</span>
+            Name <span style={{ color: '#C8102E' }}>*</span>
           </label>
           <input
             type="text"
@@ -273,14 +273,14 @@ export default function EscalationForm({
             fontSize: 14,
             fontWeight: 600,
             color: '#ffffff',
-            background: submitting ? '#B0122C' : '#B0122C',
+            background: submitting ? '#C8102E' : '#C8102E',
             border: 'none',
             borderRadius: 10,
             cursor: submitting ? 'not-allowed' : 'pointer',
             opacity: submitting ? 0.7 : 1,
             transition: 'all 0.2s ease',
             fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
-            boxShadow: '0 2px 8px rgba(176,18,44,0.2)',
+            boxShadow: '0 2px 8px rgba(200,16,46,0.2)',
           }}
         >
           {submitting ? 'Submitting...' : 'Submit Escalation Request'}

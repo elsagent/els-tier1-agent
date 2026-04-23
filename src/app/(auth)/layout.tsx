@@ -25,7 +25,7 @@ export default function AuthLayout({
           width: 600,
           height: 600,
           borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(176,18,44,0.06) 0%, transparent 70%)",
+          background: "radial-gradient(circle, rgba(200,16,46,0.06) 0%, transparent 70%)",
           pointerEvents: "none",
         }}
       />
@@ -50,7 +50,7 @@ export default function AuthLayout({
           width: 800,
           height: 800,
           borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(176,18,44,0.03) 0%, transparent 50%)",
+          background: "radial-gradient(circle, rgba(200,16,46,0.03) 0%, transparent 50%)",
           pointerEvents: "none",
         }}
       />

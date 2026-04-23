@@ -33,13 +33,13 @@ export default function LoginPage() {
     width: "100%",
     padding: "12px 14px",
     fontSize: 14,
-    border: focusedField === field ? "1.5px solid #B0122C" : "1px solid #e2e8f0",
+    border: focusedField === field ? "1.5px solid #C8102E" : "1px solid #e2e8f0",
     borderRadius: 12,
     outline: "none",
     color: "#0f172a",
     background: "#ffffff",
     transition: "all 0.2s ease",
-    boxShadow: focusedField === field ? "0 0 0 3px rgba(176,18,44,0.15)" : "none",
+    boxShadow: focusedField === field ? "0 0 0 3px rgba(200,16,46,0.15)" : "none",
     fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
   });
 
@@ -61,7 +61,7 @@ export default function LoginPage() {
               width: 48,
               height: 48,
               borderRadius: 14,
-              background: "#B0122C",
+              background: "#C8102E",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -69,7 +69,7 @@ export default function LoginPage() {
               fontWeight: 900,
               fontSize: 16,
               letterSpacing: 0.5,
-              boxShadow: "0 4px 24px rgba(176,18,44,0.2)",
+              boxShadow: "0 4px 24px rgba(200,16,46,0.2)",
             }}
           >
             ELS
@@ -144,7 +144,7 @@ export default function LoginPage() {
             onClick={() => setSent(false)}
             style={{
               fontWeight: 600,
-              color: "#B0122C",
+              color: "#C8102E",
               textDecoration: "none",
               background: "none",
               border: "none",
@@ -169,7 +169,7 @@ export default function LoginPage() {
             width: 56,
             height: 56,
             borderRadius: 16,
-            background: "linear-gradient(135deg, #B0122C 0%, #D4365C 100%)",
+            background: "linear-gradient(135deg, #C8102E 0%, #D4365C 100%)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -177,7 +177,7 @@ export default function LoginPage() {
             fontWeight: 900,
             fontSize: 18,
             letterSpacing: 0.5,
-            boxShadow: "0 8px 32px rgba(176,18,44,0.25), 0 4px 12px rgba(176,18,44,0.15)",
+            boxShadow: "0 8px 32px rgba(200,16,46,0.25), 0 4px 12px rgba(200,16,46,0.15)",
           }}
         >
           ELS
@@ -262,14 +262,14 @@ export default function LoginPage() {
             fontSize: 14,
             fontWeight: 600,
             color: "#ffffff",
-            background: loading ? "#B0122C" : hoverButton ? "linear-gradient(135deg, #8E0F23 0%, #B0122C 100%)" : "linear-gradient(135deg, #B0122C 0%, #D4365C 100%)",
+            background: loading ? "#C8102E" : hoverButton ? "linear-gradient(135deg, #A00C24 0%, #C8102E 100%)" : "linear-gradient(135deg, #C8102E 0%, #D4365C 100%)",
             border: "none",
             borderRadius: 12,
             cursor: loading ? "not-allowed" : "pointer",
             opacity: loading ? 0.7 : 1,
             transition: "all 0.2s ease",
             fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
-            boxShadow: hoverButton && !loading ? "0 4px 12px rgba(176,18,44,0.3)" : "none",
+            boxShadow: hoverButton && !loading ? "0 4px 12px rgba(200,16,46,0.3)" : "none",
           }}
         >
           {loading ? "Sending magic link..." : "Send magic link"}

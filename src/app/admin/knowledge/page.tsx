@@ -29,7 +29,7 @@ interface KnowledgeData {
 
 // ─── Constants ───
 const TIERS = [
-  { key: 'tier1', label: 'Tier 1 — Customer Support', color: '#B0122C', bgLight: '#fdf2f4', icon: '👥' },
+  { key: 'tier1', label: 'Tier 1 — Customer Support', color: '#C8102E', bgLight: '#fdf2f4', icon: '👥' },
   { key: 'tier2', label: 'Tier 2 — Technical Support', color: '#1e40af', bgLight: '#eff6ff', icon: '🔧' },
 ];
 
@@ -227,7 +227,7 @@ export default function KnowledgeBasePage() {
               borderRadius: 10, outline: 'none', transition: 'border-color 0.15s',
               background: '#f8fafc',
             }}
-            onFocus={e => e.currentTarget.style.borderColor = '#B0122C'}
+            onFocus={e => e.currentTarget.style.borderColor = '#C8102E'}
             onBlur={e => e.currentTarget.style.borderColor = '#e2e8f0'}
             autoFocus
           />
@@ -276,7 +276,7 @@ export default function KnowledgeBasePage() {
             padding: '6px 14px', fontSize: 12, fontWeight: 600, color: '#64748b',
             cursor: 'pointer', transition: 'all 0.15s',
           }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = '#B0122C'; e.currentTarget.style.color = '#B0122C'; }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = '#C8102E'; e.currentTarget.style.color = '#C8102E'; }}
           onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#64748b'; }}
         >
           Sign Out

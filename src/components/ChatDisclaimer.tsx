@@ -35,11 +35,11 @@ export default function ChatDisclaimer() {
       <strong>911</strong> first. For other urgent lock issues during business hours, call{' '}
       <a
         href="tel:4078144974"
-        style={{ color: '#B0122C', textDecoration: 'none', fontWeight: 600 }}
+        style={{ color: '#C8102E', textDecoration: 'none', fontWeight: 600 }}
       >
         407-814-4974
       </a>{' '}
-      (Mon-Fri 8am-6:30pm ET).
+      (Mon-Fri 8am-4pm ET).
     </div>
   );
 }
