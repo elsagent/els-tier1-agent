@@ -9,22 +9,19 @@
  * Required env (read from process.env — load .env.local yourself if running local):
  *   OPENAI_API_KEY
  *   OPENAI_VECTOR_STORE_ID
- *   TRIAGE_WORKFLOW_ID | TIER1_WORKFLOW_ID | TIER2_WORKFLOW_ID  (Assistant IDs)
+ *   TRIAGE_WORKFLOW_ID | TIER1_WORKFLOW_ID | TIER2_WORKFLOW_ID  (or *_ASSISTANT_ID)
  *   NEXT_PUBLIC_SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
  *
  * Optional:
  *   FALLBACK_MODEL              default: gpt-4o-mini
  *   SMOKE_TEST_URLS             comma-separated health URLs to probe
- *                               (e.g. the 4 Railway /api/health endpoints)
  *   SMOKE_TEST_SKIP             comma-separated probe names to skip:
  *                               env,supabase,assistants,vectorstore,model,health
  */
 
 import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
-
-// ─── Config ────────────────────────────────────────────────────────────────
 
 const REQUIRED_ENV = [
   'OPENAI_API_KEY',
@@ -33,10 +30,14 @@ const REQUIRED_ENV = [
   'SUPABASE_SERVICE_ROLE_KEY',
 ];
 
+// Accept either *_WORKFLOW_ID (legacy) or *_ASSISTANT_ID (current Railway convention).
 const ASSISTANT_ENV_KEYS = [
   'TRIAGE_WORKFLOW_ID',
   'TIER1_WORKFLOW_ID',
   'TIER2_WORKFLOW_ID',
+  'TRIAGE_ASSISTANT_ID',
+  'TIER1_ASSISTANT_ID',
+  'TIER2_ASSISTANT_ID',
 ];
 
 const FALLBACK_MODEL = process.env.FALLBACK_MODEL || 'gpt-4o-mini';
@@ -45,8 +46,6 @@ const HEALTH_URLS = (process.env.SMOKE_TEST_URLS || '')
   .split(',')
   .map((s) => s.trim())
   .filter(Boolean);
-
-// ─── Pretty output ─────────────────────────────────────────────────────────
 
 const isTTY = process.stdout.isTTY;
 const c = {
@@ -78,27 +77,20 @@ async function probe(name, fn) {
   }
 }
 
-// ─── Probes ────────────────────────────────────────────────────────────────
-
 async function probeEnv() {
   const missing = [];
   const placeholder = [];
-
   for (const key of REQUIRED_ENV) {
     const v = process.env[key];
     if (!v) missing.push(key);
     else if (v.startsWith('CHANGE_ME_')) placeholder.push(key);
   }
-
   const assistantIds = ASSISTANT_ENV_KEYS.filter((k) => process.env[k]);
   if (assistantIds.length === 0) {
     missing.push(`at least one of ${ASSISTANT_ENV_KEYS.join('/')}`);
   }
-
   if (missing.length) throw new Error(`missing: ${missing.join(', ')}`);
   if (placeholder.length) throw new Error(`CHANGE_ME_ placeholder still set for: ${placeholder.join(', ')}`);
-
-  // Shape checks — OpenAI key starts with sk-, vector store with vs_, assistants with asst_
   if (!process.env.OPENAI_API_KEY.startsWith('sk-')) throw new Error('OPENAI_API_KEY does not start with sk-');
   if (!process.env.OPENAI_VECTOR_STORE_ID.startsWith('vs_')) throw new Error('OPENAI_VECTOR_STORE_ID does not start with vs_');
   for (const k of assistantIds) {
@@ -106,7 +98,6 @@ async function probeEnv() {
       throw new Error(`${k} does not start with asst_ or wf_`);
     }
   }
-
   return `${REQUIRED_ENV.length} required + ${assistantIds.length} assistant IDs`;
 }
 
@@ -116,13 +107,10 @@ async function probeSupabase() {
     process.env.SUPABASE_SERVICE_ROLE_KEY,
     { auth: { persistSession: false } }
   );
-  // Cheapest possible query: count on a table we know exists.
-  // Try `messages` first (created by our schema), fall back to auth.users.
   const { error, count } = await supabase
     .from('messages')
     .select('*', { count: 'exact', head: true });
   if (error) {
-    // Try a table we're certain exists in every Supabase project
     const { error: authErr } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1 });
     if (authErr) throw new Error(`supabase unreachable: ${error.message}`);
     return 'reachable (messages table not found; auth ok)';
@@ -135,7 +123,6 @@ async function probeAssistants(openai) {
   for (const key of ASSISTANT_ENV_KEYS) {
     const id = process.env[key];
     if (!id) continue;
-    // Assistant IDs (asst_*) use the assistants API; workflow IDs (wf_*) are validated by the model call probe.
     if (id.startsWith('asst_')) {
       const a = await openai.beta.assistants.retrieve(id);
       checked.push(`${key}=${a.id.slice(0, 14)}…`);
@@ -184,23 +171,16 @@ async function probeHealth() {
   return `${HEALTH_URLS.length}/${HEALTH_URLS.length} healthy`;
 }
 
-// ─── Main ──────────────────────────────────────────────────────────────────
-
 async function main() {
   console.log(c.bold('\nELS smoke test'));
   console.log(c.dim(`  fallback model: ${FALLBACK_MODEL}`));
   console.log(c.dim(`  skipped: ${[...SKIP].join(',') || 'none'}\n`));
-
   await probe('env', probeEnv);
-
-  // All subsequent probes need env — bail if env failed
   if (!results[0].ok && !results[0].skipped) {
     console.log(c.red('\nenv probe failed; skipping downstream probes.\n'));
     process.exit(1);
   }
-
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
   await probe('supabase', probeSupabase);
   await probe('assistants', () => probeAssistants(openai));
   await probe('vectorstore', () => probeVectorStore(openai));
@@ -210,7 +190,6 @@ async function main() {
   const failed = results.filter((r) => !r.ok && !r.skipped);
   const passed = results.filter((r) => r.ok && !r.skipped);
   const skipped = results.filter((r) => r.skipped);
-
   console.log('');
   if (failed.length === 0) {
     console.log(c.green(`  ✓ ${passed.length} passed`) + c.dim(`${skipped.length ? `, ${skipped.length} skipped` : ''}\n`));
