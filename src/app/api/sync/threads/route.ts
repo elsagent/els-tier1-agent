@@ -176,8 +176,37 @@ export async function GET(request: NextRequest) {
           (item) => item.type !== "chatkit.task_group"
         );
 
-        // Delete existing messages for this conversation, then re-insert
-        // (idempotent sync — always reflects latest ChatKit state)
+        // Preserve rows written by /api/chat — those carry token_usage,
+        // safety_class, retrieved_sources, response_id that power the
+        // Cost / Safety / KB-Utilization dashboards. ChatKit's thread
+        // items don't expose those fields, so a naive delete+reinsert
+        // clobbered them on every sync.
+        //
+        // If the conversation already has at least one row with
+        // token_usage populated, skip syncing — the /api/chat path has
+        // authoritative (richer) data.
+        const { data: enriched, error: enrichedErr } = await supabase
+          .from("messages")
+          .select("id")
+          .eq("conversation_id", conversationId)
+          .not("token_usage", "is", null)
+          .limit(1);
+
+        if (enrichedErr) {
+          errors++;
+          details.push(`enrichment-check-err:${conversationId} ${enrichedErr.message}`);
+          continue;
+        }
+
+        if (enriched && enriched.length > 0) {
+          // Already have rich data — skip clobbering.
+          synced++;
+          details.push(`skipped-sync:${conversationId} (already enriched)`);
+          continue;
+        }
+
+        // No enriched data for this conversation — safe to refresh from
+        // ChatKit as the source of truth.
         await supabase
           .from("messages")
           .delete()
