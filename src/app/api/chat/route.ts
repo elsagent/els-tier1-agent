@@ -3,6 +3,7 @@ import { runTier1 } from '@/lib/agents/tier1';
 import { runTier2 } from '@/lib/agents/tier2';
 import { classify, cannedResponseFor, type SafetyClass } from '@/lib/agents/classifier';
 import { checkRate } from '@/lib/rate_limit';
+import { normalizeAiTells, normalizeAssistantMessage } from '@/lib/normalize_ai_tells';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
@@ -305,20 +306,22 @@ export async function POST(request: Request) {
                     continue;
                   }
 
+                  const normT2 = normalizeAiTells(t2chunk);
                   if (isEscalated) {
-                    tier2FullMessage += t2chunk;
-                    send({ type: 'escalate', content: t2chunk, summary: t2chunk });
+                    tier2FullMessage += normT2;
+                    send({ type: 'escalate', content: normT2, summary: normT2 });
                   } else {
-                    tier2FullMessage += t2chunk;
-                    send({ type: 'text', content: t2chunk });
+                    tier2FullMessage += normT2;
+                    send({ type: 'text', content: normT2 });
                   }
                 }
 
                 fullAssistantMessage += tier2FullMessage;
               } catch {
                 // Not JSON, treat as regular text
-                fullAssistantMessage += chunk;
-                send({ type: 'text', content: chunk });
+                const normChunk = normalizeAiTells(chunk);
+                fullAssistantMessage += normChunk;
+                send({ type: 'text', content: normChunk });
               }
               continue;
             }
@@ -333,18 +336,23 @@ export async function POST(request: Request) {
               continue;
             }
 
+            const normChunk = normalizeAiTells(chunk);
             if (isEscalated) {
-              fullAssistantMessage += chunk;
-              send({ type: 'escalate', content: chunk, summary: chunk });
+              fullAssistantMessage += normChunk;
+              send({ type: 'escalate', content: normChunk, summary: normChunk });
             } else {
-              fullAssistantMessage += chunk;
-              send({ type: 'text', content: chunk });
+              fullAssistantMessage += normChunk;
+              send({ type: 'text', content: normChunk });
             }
           }
 
           // Save assistant message with per-turn metadata. Degrades gracefully
           // if the 20260422_add_turn_metadata migration hasn't been applied yet.
           if (fullAssistantMessage) {
+            // Final belt-and-suspenders scrub: strips any boilerplate openers
+            // that slipped past the persona prompt (per-chunk normalization
+            // can't detect them because they only count at message start).
+            fullAssistantMessage = normalizeAssistantMessage(fullAssistantMessage);
             const sourcesArr = retrievedSources.size ? Array.from(retrievedSources) : null;
             const fullPayload = {
               conversation_id: convId,

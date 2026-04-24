@@ -28,7 +28,8 @@ overall_threshold: 0.90
 block_d_threshold: 1.00
 
 # Tokens the Voice block forbids in responses.
-# Keep in sync with lib/agents/normalize.ts (once the normalizer lands).
+# Keep in sync with src/lib/normalize_ai_tells.ts (the runtime normalizer
+# that strips these before the message hits the user or the DB).
 forbidden_voice_tokens:
   - "\u2014"         # em-dash
   - "\u2013"         # en-dash
