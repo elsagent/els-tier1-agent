@@ -112,6 +112,14 @@ export default function Tier2ChatPage() {
       resetConversation();
       setStatus('error');
     },
+    onThreadChange: ({ threadId }: { threadId: string | null }) => {
+      if (!threadId) return;
+      fetch('/api/chatkit/tag-thread', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ thread_id: threadId, tier: 'tier2', workflow_id: WORKFLOW_ID }),
+      }).catch(() => {});
+    },
   });
 
   const { control, ref, setComposerValue, focusComposer } = chatkit as any;
