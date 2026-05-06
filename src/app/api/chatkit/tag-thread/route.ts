@@ -5,11 +5,18 @@ export const dynamic = 'force-dynamic';
 
 // POST /api/chatkit/tag-thread
 // Body: { thread_id: string, tier: 'tier1'|'tier2'|'tier3', workflow_id?: string }
-// Records which tier a ChatKit thread came from. Idempotent (PK on thread_id).
+// Idempotent insert into public.chatkit_thread_tiers via Supabase REST.
+// Uses the anon key (els-tier1-agent's existing Supabase env). RLS policy
+// on the table allows anon INSERT only — see migration 20260506b.
 export async function POST(req: NextRequest) {
   try {
-    const SUPABASE_URL = process.env.SUPABASE_URL;
-    const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const SUPABASE_URL =
+      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      process.env.SUPABASE_URL;
+    const SUPABASE_KEY =
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      process.env.SUPABASE_ANON_KEY;
     if (!SUPABASE_URL || !SUPABASE_KEY) {
       return NextResponse.json({ error: 'Supabase env missing' }, { status: 500 });
     }
@@ -33,7 +40,7 @@ export async function POST(req: NextRequest) {
 
     if (!r.ok && r.status !== 409) {
       const text = await r.text();
-      return NextResponse.json({ error: 'Supabase insert failed', detail: text }, { status: 500 });
+      return NextResponse.json({ error: 'Supabase insert failed', status: r.status, detail: text }, { status: 500 });
     }
 
     return NextResponse.json({ ok: true });
